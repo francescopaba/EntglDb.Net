@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+<a name="1.1.3"></a>
+## [1.1.3](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v1.1.3) (2026-03-06)
+
+### Bug Fixes
+
+* adds cancellation token to async blite mutations ([4b87114](https://www.github.com/EntglDb/EntglDb.Net/commit/4b8711458674ebc1783f522996e1a7872c271ec7))
+
 <a name="1.1.2"></a>
 ## [1.1.2](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v1.1.2) (2026-03-06)
 
