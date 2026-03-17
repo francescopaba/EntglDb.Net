@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+<a name="2.0.0"></a>
+## [2.0.0] (2026-03-17)
+
+### Breaking Changes
+
+* **Target frameworks**: rimossi `netstandard2.0`, `net6.0`, `net8.0`; le librerie ora puntano a `netstandard2.1;net10.0` (eccetto `EntglDb.AspNet` e `EntglDb.Persistence.EntityFramework` che puntano solo a `net10.0`)
+* Rimossa dipendenza da `Microsoft.AspNetCore.Http.Abstractions` in `EntglDb.AspNet` (fornita dal framework in net10.0)
+
+### Changed
+
+* Tutti i pacchetti `Microsoft.Extensions.*` aggiornati alla 10.0.5
+* `Microsoft.EntityFrameworkCore` e `Microsoft.EntityFrameworkCore.Relational` aggiornati alla 10.0.5
+* `System.Text.Json` e `System.Threading.Channels` referenziati come pacchetti solo per `netstandard2.1` (built-in per `net10.0`)
+* Progetti di test aggiornati a `net10.0`; versioni pacchetti di test aggiornate (coverlet.collector 8.0.0, FluentAssertions 8.9.0, Microsoft.NET.Test.Sdk 18.3.0, xunit.runner.visualstudio 3.1.5)
+
+---
+
 <a name="1.1.7"></a>
 ## [1.1.7](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v1.1.7) (2026-03-12)
 
