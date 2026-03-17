@@ -4,6 +4,7 @@ using EntglDb.Network;
 using EntglDb.Persistence.BLite;
 using EntglDb.Sample.Shared;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => 
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+    c.SwaggerDoc("v1", new OpenApiInfo 
     { 
         Title = "EntglDb ASP.NET Node", 
         Version = "v0.8.6",
