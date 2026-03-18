@@ -90,9 +90,12 @@ public class GameService : BackgroundService
         var h = _currentHero!;
         double hpPct = (double)h.Hp / h.MaxHp;
         var hpColor = hpPct > 0.6 ? "green" : hpPct > 0.3 ? "yellow" : "red";
+        double mpPct = (double)h.Mp / h.MaxMp;
+        var mpColor = mpPct > 0.6 ? "blue" : mpPct > 0.3 ? "cyan" : "grey";
+        var classEmoji = HeroClassFactory.Profiles[h.HeroClass].Emoji;
 
         AnsiConsole.Write(new Rule(
-            $"[bold]{Markup.Escape(h.Name)}[/] [grey]Lv.{h.Level}[/]  [{hpColor}]HP {h.Hp}/{h.MaxHp}[/]  [gold1]Gold {h.Gold}[/]")
+            $"{classEmoji} [bold]{Markup.Escape(h.Name)}[/] [grey]Lv.{h.Level} {h.HeroClass}[/]  [{hpColor}]HP {h.Hp}/{h.MaxHp}[/]  [{mpColor}]MP {h.Mp}/{h.MaxMp}[/]  [gold1]Gold {h.Gold}[/]")
         {
             Justification = Justify.Center,
             Style = Style.Parse("cyan"),
@@ -134,7 +137,58 @@ public class GameService : BackgroundService
                     ? ValidationResult.Success()
                     : ValidationResult.Error("Name cannot be empty")));
 
+        // Build class choices with emoji + description
+        var classChoices = HeroClassFactory.Profiles
+            .Select(kvp => $"{kvp.Value.Emoji} {kvp.Key,-8} — {kvp.Value.Description}")
+            .ToArray();
+
+        var classKeys = HeroClassFactory.Profiles.Keys.ToArray();
+
+        // Show stat ranges per class
+        var rangeTable = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Color.DarkOrange)
+            .Title("[bold orange1]Class Stat Ranges[/]")
+            .AddColumn("Class")
+            .AddColumn("HP")
+            .AddColumn("ATK")
+            .AddColumn("DEF")
+            .AddColumn("MP")
+            .AddColumn("MATK");
+        foreach (var (cls, p) in HeroClassFactory.Profiles)
+            rangeTable.AddRow(
+                $"{p.Emoji} [bold]{cls}[/]",
+                $"{p.MinHp}-{p.MaxHp}",
+                $"[red]{p.MinAttack}-{p.MaxAttack}[/]",
+                $"[blue]{p.MinDefense}-{p.MaxDefense}[/]",
+                $"[cyan]{p.MinMp}-{p.MaxMp}[/]",
+                $"[magenta]{p.MinMagicAttack}-{p.MaxMagicAttack}[/]");
+        AnsiConsole.Write(rangeTable);
+        AnsiConsole.WriteLine();
+
+        var classChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold yellow]Choose your class:[/]")
+                .HighlightStyle(new Style(Color.Gold1))
+                .AddChoices(classChoices));
+
+        int classIdx = Array.IndexOf(classChoices, classChoice);
+        var heroClass = classKeys[classIdx];
+
         var hero = new Hero { Name = name, NodeId = _nodeId };
+        HeroClassFactory.ApplyInitialStats(hero, heroClass, _rng);
+
+        var p2 = HeroClassFactory.Profiles[heroClass];
+        AnsiConsole.Write(new Panel(
+            new Markup(
+                $"{p2.Emoji} [bold]{heroClass}[/] — {p2.Description}\n" +
+                $"[green]HP {hero.MaxHp}[/]   [red]ATK {hero.Attack}[/]   [blue]DEF {hero.Defense}[/]   [cyan]MP {hero.MaxMp}[/]   [magenta]MATK {hero.MagicAttack}[/]"))
+        {
+            Header = new PanelHeader(" Stats rolled! ", Justify.Center),
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.DarkOrange),
+            Padding = new Padding(2, 1),
+        });
 
         await _db.Heroes.InsertAsync(hero);
         await _db.SaveChangesAsync(ct);
@@ -156,7 +210,8 @@ public class GameService : BackgroundService
             .Select(h =>
             {
                 var origin = h.NodeId == _nodeId ? "" : $" ({h.NodeId})";
-                return $"{h.Name} — Lv.{h.Level}  HP:{h.Hp}/{h.MaxHp}  Gold:{h.Gold}{origin}";
+                var emoji = HeroClassFactory.Profiles[h.HeroClass].Emoji;
+                return $"{emoji} {h.Name} [{h.HeroClass}] — Lv.{h.Level}  HP:{h.Hp}/{h.MaxHp}  Gold:{h.Gold}{origin}";
             })
             .Append("Cancel")
             .ToArray();
@@ -216,22 +271,26 @@ public class GameService : BackgroundService
             double monHpPct  = (double)monsterHp / monster.Hp;
             var heroHpColor  = heroHpPct > 0.5 ? "green" : heroHpPct > 0.25 ? "yellow" : "red";
             var monHpColor   = monHpPct  > 0.5 ? "red"   : monHpPct  > 0.25 ? "yellow" : "green";
+            var heroMpColor = hero.Mp >= 15 ? "blue" : "grey";
             AnsiConsole.MarkupLine(
                 $"[grey]── Round {round} ──[/]  " +
-                $"[{heroHpColor}]You: {hero.Hp}/{hero.MaxHp} HP[/]   " +
+                $"[{heroHpColor}]You: {hero.Hp}/{hero.MaxHp} HP[/]  [{heroMpColor}]MP {hero.Mp}/{hero.MaxMp}[/]   " +
                 $"[{monHpColor}]{monster.Emoji} {Markup.Escape(monster.Name)}: {monsterHp}/{monster.Hp} HP[/]");
 
             // Player chooses action
-            var action = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("  [bold yellow]Choose your move:[/]")
-                    .HighlightStyle(new Style(Color.Gold1))
-                    .AddChoices(
-                        "Attack        — Standard strike",
-                        "Quick Strike  — Two fast hits (lower damage each)",
-                        "Power Blow    — Heavy hit, you take 50% more damage",
-                        "Parry         — Counter for half, take 70% less damage",
-                        "Dodge         — 55% chance to fully evade, then strike"));
+            const int spellCost = 15;
+            var movePrompt = new SelectionPrompt<string>()
+                .Title($"  [bold yellow]Choose your move:[/]  [blue]MP {hero.Mp}/{hero.MaxMp}[/]")
+                .HighlightStyle(new Style(Color.Gold1))
+                .AddChoices(
+                    "Attack        — Standard strike",
+                    "Quick Strike  — Two fast hits (lower damage each)",
+                    "Power Blow    — Heavy hit, you take 50% more damage",
+                    "Parry         — Counter for half, take 70% less damage",
+                    "Dodge         — 55% chance to fully evade, then strike");
+            if (hero.Mp >= spellCost)
+                movePrompt.AddChoice($"Fireball      — Magic blast ({spellCost} MP), ignores defense");
+            var action = AnsiConsole.Prompt(movePrompt);
 
             // Resolve hero action based on first word
             int heroDmg;
@@ -261,6 +320,11 @@ public class GameService : BackgroundService
                     heroDmg = Math.Max(1, hero.Attack - monster.Defense + _rng.Next(-3, 4));
                     dodgeAttempt = true;
                     heroLine = $"[green]💨  Dodge & Strike! [bold]{heroDmg}[/] dmg[/]";
+                    break;
+                case "Fireball":
+                    heroDmg = Math.Max(1, (int)(hero.MagicAttack * 1.5) + _rng.Next(-2, 5));
+                    hero.Mp -= spellCost;
+                    heroLine = $"[magenta]🔥  Fireball! [bold]{heroDmg}[/] magic dmg [dim](-{spellCost} MP)[/][/]";
                     break;
                 default: // Attack
                     heroDmg = Math.Max(1, hero.Attack - monster.Defense + _rng.Next(-3, 4));
@@ -315,10 +379,17 @@ public class GameService : BackgroundService
             battleLog.XpGained = monster.XpReward;
             battleLog.GoldGained = monster.GoldReward;
 
+            // MP regenerates from combat — the last 20% above the inn cap is earned this way
+            int mpGain = Math.Max(3, monster.XpReward / 8);
+            int mpBefore = hero.Mp;
+            hero.Mp = Math.Min(hero.MaxMp, hero.Mp + mpGain);
+            int actualMpGain = hero.Mp - mpBefore;
+
+            string mpLine = actualMpGain > 0 ? $"\n[blue]+{actualMpGain} MP[/]" : "";
             AnsiConsole.Write(new Panel(
                 new Markup(
                     $"[bold green]🏆 Victory![/] You defeated [bold]{Markup.Escape(monster.Name)}[/]!\n" +
-                    $"[cyan]+{monster.XpReward} XP[/]   [gold1]+{monster.GoldReward} Gold[/]"))
+                    $"[cyan]+{monster.XpReward} XP[/]   [gold1]+{monster.GoldReward} Gold[/]{mpLine}"))
             {
                 Border = BoxBorder.Rounded,
                 BorderStyle = new Style(Color.Green),
@@ -406,16 +477,22 @@ public class GameService : BackgroundService
         if (hero.Xp < xpNeeded) return;
 
         hero.Level++;
-        hero.Xp    -= xpNeeded;
-        hero.MaxHp += 15;
-        hero.Hp     = hero.MaxHp;
-        hero.Attack += 3;
-        hero.Defense += 2;
+        hero.Xp -= xpNeeded;
+        // Per-class level-up stat growth (random within class range / 10)
+        var lp = HeroClassFactory.Profiles[hero.HeroClass];
+        hero.MaxHp       += _rng.Next((lp.MaxHp - lp.MinHp) / 10 + 8, (lp.MaxHp - lp.MinHp) / 10 + 18);
+        hero.Hp           = hero.MaxHp;
+        hero.Attack      += _rng.Next((lp.MaxAttack - lp.MinAttack) / 5 + 1, (lp.MaxAttack - lp.MinAttack) / 5 + 5);
+        hero.Defense     += _rng.Next((lp.MaxDefense - lp.MinDefense) / 5 + 1, (lp.MaxDefense - lp.MinDefense) / 5 + 3);
+        hero.MaxMp       += _rng.Next((lp.MaxMp - lp.MinMp) / 5 + 4, (lp.MaxMp - lp.MinMp) / 5 + 12);
+        hero.MagicAttack += _rng.Next((lp.MaxMagicAttack - lp.MinMagicAttack) / 5 + 1, (lp.MaxMagicAttack - lp.MinMagicAttack) / 5 + 4);
+        // Level up restores MP to the 80% inn cap
+        hero.Mp = Math.Max(hero.Mp, (int)(hero.MaxMp * 0.8));
 
         AnsiConsole.Write(new Panel(
             new Markup(
                 $"[bold magenta]⭐ LEVEL UP!  →  Level {hero.Level}[/]\n" +
-                $"MaxHP [bold]{hero.MaxHp}[/]   ATK [bold]{hero.Attack}[/]   DEF [bold]{hero.Defense}[/]"))
+                $"MaxHP [bold]{hero.MaxHp}[/]   ATK [bold]{hero.Attack}[/]   DEF [bold]{hero.Defense}[/]   MaxMP [bold]{hero.MaxMp}[/]   MATK [bold]{hero.MagicAttack}[/]"))
         {
             Border = BoxBorder.Double,
             BorderStyle = new Style(Color.Magenta1),
@@ -441,10 +518,17 @@ public class GameService : BackgroundService
 
         hero.Gold -= cost;
         hero.Hp = hero.MaxHp;
+        // Inn only restores MP to 80% — the final 20% must be earned through combat
+        int mpCap = (int)(hero.MaxMp * 0.8);
+        int mpRestored = Math.Max(0, mpCap - hero.Mp);
+        hero.Mp = Math.Max(hero.Mp, mpCap);
         await _db.Heroes.UpdateAsync(hero);
         await _db.SaveChangesAsync(ct);
 
-        AnsiConsole.MarkupLine($"[green]🏨 You rest at the inn. HP fully restored! (-{cost}G)[/]");
+        string mpNote = mpRestored > 0
+            ? $" [blue]+{mpRestored} MP[/] [grey](capped at 80% — kill monsters for more)[/]"
+            : " [grey]MP already at 80%+ (kill monsters to reach max)[/]";
+        AnsiConsole.MarkupLine($"[green]🏨 You rest at the inn. HP fully restored! (-{cost}G)[/]{mpNote}");
     }
 
     private void ShowStats()
@@ -459,11 +543,16 @@ public class GameService : BackgroundService
             .AddColumn(new TableColumn("[grey]Stat[/]"))
             .AddColumn(new TableColumn("[grey]Value[/]"));
 
+        var cEmoji = HeroClassFactory.Profiles[h.HeroClass].Emoji;
+        var cDesc  = HeroClassFactory.Profiles[h.HeroClass].Description;
         table.AddRow("Name",    $"[bold]{Markup.Escape(h.Name)}[/]");
+        table.AddRow("Class",   $"{cEmoji} [bold orange1]{h.HeroClass}[/] [grey]— {cDesc}[/]");
         table.AddRow("Level",   $"[yellow]{h.Level}[/]");
-        table.AddRow("HP",      $"[green]{h.Hp} / {h.MaxHp}[/]");
-        table.AddRow("Attack",  $"[red]{h.Attack}[/]");
-        table.AddRow("Defense", $"[blue]{h.Defense}[/]");
+        table.AddRow("HP",           $"[green]{h.Hp} / {h.MaxHp}[/]");
+        table.AddRow("MP",           $"[blue]{h.Mp} / {h.MaxMp}[/] [grey](inn cap: {(int)(h.MaxMp * 0.8)})[/]");
+        table.AddRow("Attack",       $"[red]{h.Attack}[/]");
+        table.AddRow("Magic Attack", $"[magenta]{h.MagicAttack}[/]");
+        table.AddRow("Defense",      $"[blue]{h.Defense}[/]");
         table.AddRow("Gold",    $"[gold1]{h.Gold}[/]");
         table.AddRow("XP",      $"[cyan]{h.Xp} / {xpNeeded}[/]");
         table.AddRow("Kills",   $"{h.MonstersKilled}");
@@ -529,6 +618,7 @@ public class GameService : BackgroundService
             .Title("[bold gold1]🏆 Leaderboard (synced across nodes)[/]")
             .AddColumn("#")
             .AddColumn("Hero")
+            .AddColumn("Class")
             .AddColumn("Level")
             .AddColumn("Kills")
             .AddColumn("Gold")
@@ -541,8 +631,9 @@ public class GameService : BackgroundService
             var medal  = i switch { 0 => "🥇", 1 => "🥈", 2 => "🥉", _ => $"{i + 1}" };
             var status = h.IsAlive ? "[green]Alive[/]" : "[red]Fallen[/]";
             var node   = h.NodeId == _nodeId ? "[grey]local[/]" : $"[grey]{Markup.Escape(h.NodeId)}[/]";
+            var lEmoji = HeroClassFactory.Profiles[h.HeroClass].Emoji;
             table.AddRow(medal, $"[bold]{Markup.Escape(h.Name)}[/]",
-                $"{h.Level}", $"{h.MonstersKilled}", $"{h.Gold}", status, node);
+                $"{lEmoji} {h.HeroClass}", $"{h.Level}", $"{h.MonstersKilled}", $"{h.Gold}", status, node);
         }
 
         AnsiConsole.Write(table);
