@@ -22,10 +22,11 @@ public class SampleEfCoreDocumentStore : EfCoreDocumentStore<SampleEfCoreDbConte
 
     public SampleEfCoreDocumentStore(
         SampleEfCoreDbContext context,
+        IDocumentMetadataStore metadataStore,
+        IPendingChangesService pendingChangesService,
         IPeerNodeConfigurationProvider configProvider,
-        IVectorClockService vectorClockService,
         ILogger<SampleEfCoreDocumentStore>? logger = null)
-        : base(context, configProvider, vectorClockService, new LastWriteWinsConflictResolver(), logger)
+        : base(context, metadataStore, pendingChangesService, configProvider, new LastWriteWinsConflictResolver(), logger)
     {
     }
 
