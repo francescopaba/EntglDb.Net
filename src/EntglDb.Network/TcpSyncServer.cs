@@ -16,27 +16,28 @@ using System.Threading.Tasks;
 namespace EntglDb.Network;
 
 /// <summary>
+/// Carries per-message context into a handler. Implements <see cref="IMessageHandlerContext"/>
+/// so it can be passed directly to any <see cref="INetworkMessageHandler"/> implementation.
+/// </summary>
+internal class MessageHandlerContext : IMessageHandlerContext
+{
+    public byte[] Payload { get; set; } = Array.Empty<byte>();
+    public required NetworkStream Stream { get; set; }
+    public required ProtocolHandler Protocol { get; set; }
+    public bool UseCompression { get; set; }
+    public CipherState? CipherState { get; set; }
+    public EndPoint? RemoteEndPoint { get; set; }
+    public CancellationToken CancellationToken { get; set; }
+
+    public Task SendMessageAsync(int type, Google.Protobuf.IMessage message, bool useCompression = false)
+        => Protocol.SendMessageAsync(Stream, type, message, useCompression, CipherState, CancellationToken);
+}
+
+/// <summary>
 /// TCP server that handles incoming synchronization requests from remote peers.
 /// </summary>
 internal class TcpSyncServer : ISyncServer
 {
-    /// <summary>
-    /// Carries per-message context into a handler. Implements <see cref="IMessageHandlerContext"/>
-    /// so it can be passed directly to any <see cref="INetworkMessageHandler"/> implementation.
-    /// </summary>
-    private sealed class MessageHandlerContext : IMessageHandlerContext
-    {
-        public byte[] Payload { get; init; } = Array.Empty<byte>();
-        public required NetworkStream Stream { get; init; }
-        public required ProtocolHandler Protocol { get; init; }
-        public bool UseCompression { get; init; }
-        public CipherState? CipherState { get; init; }
-        public EndPoint? RemoteEndPoint { get; init; }
-        public CancellationToken CancellationToken { get; init; }
-
-        public Task SendMessageAsync(int type, Google.Protobuf.IMessage message, bool useCompression = false)
-            => Protocol.SendMessageAsync(Stream, type, message, useCompression, CipherState, CancellationToken);
-    }
 
     /// <summary>
     /// Delegate for a message handler. Returns the response message and its raw wire type integer.

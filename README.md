@@ -2,16 +2,16 @@
 
 <div align="center">
 
-**Peer-to-Peer Data Synchronization Middleware for .NET**
+**Peer-to-Peer Data Synchronization Middleware & Platform for .NET**
 
-[![.NET Version](https://img.shields.io/badge/.NET-8.0%20%7C%2010.0-purple)](https://dotnet.microsoft.com/)
+[![.NET Version](https://img.shields.io/badge/.NET_Standard_2.1%20%7C%20.NET_10.0-purple)](https://dotnet.microsoft.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Status
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
-EntglDb is not a database - it's a **sync layer** that plugs into your existing data store and enables automatic peer-to-peer replication across nodes in a mesh network.
+EntglDb is not a database — it's a **sync layer** and **P2P platform** that plugs into your existing data store and enables automatic peer-to-peer replication across nodes in a mesh network. The mesh infrastructure also serves as a foundation for building additional distributed services.
 
 [Architecture](#architecture) | [Quick Start](#quick-start) | [Integration Guide](#integrating-with-your-database) | [Documentation](#documentation)
 
@@ -38,15 +38,18 @@ EntglDb is not a database - it's a **sync layer** that plugs into your existing 
 
 ## Overview
 
-**EntglDb** is a lightweight, embeddable **data synchronization middleware** for .NET. It observes changes in your database via **Change Data Capture (CDC)**, records them in an append-only **Oplog**, and replicates them across nodes connected via a **P2P mesh network**.
+**EntglDb** is a lightweight, embeddable **data synchronization middleware and P2P platform** for .NET. It observes changes in your database via **Change Data Capture (CDC)**, records them in an append-only, hash-chained **Oplog**, and replicates them across nodes connected via a **P2P mesh network**.
 
-Your application continues to read and write to its database as usual. EntglDb works in the background.
+Your application continues to read and write to its database as usual. EntglDb works in the background, providing automatic discovery, secure transport, conflict resolution, and eventually consistent replication.
 
 > **[LAN] Designed for Local Area Networks (LAN)**  
-> Built for trusted environments: offices, retail stores, edge deployments. Cross-platform (Windows, Linux, macOS).
+> Built for trusted environments: offices, retail stores, edge deployments, factories. Cross-platform (Windows, Linux, macOS).
 
 > **[Cloud] Cloud Ready**  
 > ASP.NET Core hosting with Entity Framework Core support (SQL Server, PostgreSQL, MySQL, SQLite) and OAuth2 authentication for public deployments.
+
+> **[Platform] P2P Platform**  
+> The mesh networking, discovery, and secure transport infrastructure can be leveraged to build additional distributed services beyond data synchronization.
 
 ---
 
@@ -84,12 +87,14 @@ Your application continues to read and write to its database as usual. EntglDb w
 
 | Concept | Description |
 |---------|-------------|
-| **Oplog** | Append-only journal of changes, hash-chained per node for integrity |
-| **Vector Clock** | Tracks causal ordering - knows who has what across the mesh |
-| **CDC** | Change Data Capture - watches your registered collections for local writes |
-| **Document Store** | Your bridge class - maps between your entities and the sync engine |
-| **Conflict Resolution** | Pluggable strategy (Last-Write-Wins or custom recursive merge) |
+| **Oplog** | Append-only journal of changes, hash-chained (SHA-256) per node for integrity |
+| **Vector Clock** | Tracks causal ordering — knows who has what across the mesh |
+| **CDC** | Change Data Capture — watches your registered collections for local writes |
+| **Document Store** | Your bridge class — maps between your entities and the sync engine |
+| **DocumentMetadata** | Tracks HLC timestamps and ContentHash (SHA-256) per document |
+| **Conflict Resolution** | Pluggable strategy (Last-Write-Wins or recursive merge with field-level tracking) |
 | **VectorClockService** | Shared singleton keeping the Vector Clock in sync between CDC and OplogStore |
+| **Snapshot Service** | Fast reconnection via hash-based delta sync and boundary convergence |
 
 ### Sync Flow
 
@@ -640,35 +645,40 @@ Console.WriteLine($"Peers: {status.ConnectedPeers}");
 
 ### Concepts
 
-- **[Architecture & Concepts](docs/architecture.md)** - HLC, Gossip, Vector Clocks, Hash Chains
+- **[Architecture & Concepts](docs/architecture.md)** - HLC, Gossip, Vector Clocks, Hash Chains, Platform Model
 - **[Conflict Resolution](docs/conflict-resolution.md)** - LWW vs Recursive Merge
-- **[Oplog & CDC](docs/oplog-cdc.md)** - How change tracking works
+- **[Security](docs/security.md)** - ECDH, AES-256, HMAC, Noise Protocol
 
 ### Deployment
 
 - **[Production Guide](docs/production-hardening.md)** - Configuration, monitoring, best practices
-- **[Cloud Deployment](docs/cloud-deployment.md)** - ASP.NET Core, EF Core, OAuth2
 - **[Deployment Modes](docs/deployment-modes.md)** - Single vs Multi cluster
+- **[LAN Deployment](docs/deployment-lan.md)** - Cross-platform deployment instructions
+- **[Remote Peers](docs/remote-peer-configuration.md)** - Cloud gateways and remote node management
 
 ### API
 
 - **[API Reference](docs/api-reference.md)** - Complete API documentation
-- **[Persistence Providers](docs/persistence-providers.md)** - BLite, EF Core, custom
+- **[Persistence Providers](docs/persistence-providers.md)** - BLite, EF Core, custom providers
+- **[Network Telemetry](docs/network-telemetry.md)** - Performance monitoring
+- **[Dynamic Reconfiguration](docs/dynamic-reconfiguration.md)** - Runtime configuration changes
 
 ---
 
 ## Examples
 
-See [`samples/EntglDb.Sample.Console/`](samples/EntglDb.Sample.Console/) for a complete working example with:
+### Sample Applications
 
-- **Two-node sync** simulation on different ports
-- **Interactive CLI** for testing operations
-- **Conflict resolution demo** (switchable LWW/Merge)
-- **User and TodoList** entities with full CRUD
-- **Health monitoring** and cache inspection
-- **Automatic peer discovery** via UDP
+| Sample | Type | Description |
+|--------|------|-------------|
+| **[Console](samples/EntglDb.Sample.Console/)** | CLI | Interactive two-node sync demo with conflict resolution switching |
+| **[ASP.NET Core](samples/EntglDb.Sample.AspNetCore/)** | REST API | Health checks, Swagger API, telemetry endpoints |
+| **[Game](samples/EntglDb.Demo.Game/)** | Game | Battle log sync, game state, hero data |
+| **[Avalonia](samples/EntglDb.Test.Avalonia/)** | Desktop UI | Cross-platform (Windows/Linux/macOS), security status |
+| **[MAUI](samples/EntglDb.Test.Maui/)** | Mobile | iOS/Android, material design, network telemetry |
 
-Run two instances:
+### Quick Start Demo
+
 ```bash
 # Terminal 1
 cd samples/EntglDb.Sample.Console
@@ -686,18 +696,25 @@ dotnet run -- node-2 8581
 ## Roadmap
 
 - [x] Core P2P mesh networking (v0.1.0)
-- [x] Secure networking (ECDH + AES-256) (v0.6.0)
-- [x] Conflict resolution strategies (LWW, Recursive Merge) (v0.6.0)
+- [x] Secure networking — ECDH + AES-256 (v0.6.0)
+- [x] Conflict resolution — LWW, Recursive Merge (v0.6.0)
 - [x] Hash-chain sync with gap recovery (v0.7.0)
 - [x] Brotli compression (v0.7.0)
 - [x] Persistence snapshots (v0.8.6)
-- [x] ASP.NET Core hosting (v0.8.0)
-- [x] Entity Framework Core support (v0.8.0)
-- [x] **VectorClockService refactor** (v1.0.0)
-- [x] **CDC-aware sync** (v1.0.0)
+- [x] ASP.NET Core hosting — Single & Multi-cluster (v0.8.0)
+- [x] Entity Framework Core — SQL Server, PostgreSQL, MySQL, SQLite (v0.8.0)
+- [x] VectorClockService refactor & CDC-aware sync (v1.0.0)
+- [x] BLite & EF Core DocumentStore abstract base classes (v1.0.0)
+- [x] Full async BLite operations (v1.1.0)
+- [x] Dynamic database paths & per-collection tables (v2.0.0)
+- [x] Remote peer auto-sync via `_system_remote_peers` (v2.0.0)
+- [x] Framework targeting: `netstandard2.1;net10.0` (v2.0.0)
+- [x] ContentHash on DocumentMetadata (v2.1.0)
+- [x] Mobile support (.NET MAUI) (v2.0.0)
+- [ ] Merkle Trees for efficient sync verification
+- [ ] TLS/SSL support for secure LAN networks
 - [ ] Query optimization & advanced indexing
 - [ ] Admin UI / monitoring dashboard
-- [ ] Mobile support (Xamarin/MAUI)
 
 ---
 

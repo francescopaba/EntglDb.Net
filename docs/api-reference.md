@@ -69,9 +69,49 @@ int total = await db.Collection<User>().Count();
 int active = await db.Collection<User>().Count(u => u.IsActive);
 ```
 
+## DocumentMetadata
+
+Each synced document tracks metadata for synchronization and integrity verification.
+
+```csharp
+public class DocumentMetadata
+{
+    public string Collection { get; set; }
+    public string Key { get; set; }
+    public HlcTimestamp LastModified { get; set; }
+    public string ContentHash { get; set; }  // SHA-256 from canonical JSON (v2.1+)
+}
+```
+
+**ContentHash** (v2.1): A deterministic SHA-256 hash computed from the canonical JSON representation of the document. This enables fast integrity checks and efficient sync decisions without comparing full document content.
+
+## DocumentStore (Sync Bridge)
+
+The `BLiteDocumentStore<T>` and `EfCoreDocumentStore<T>` abstract base classes bridge your data model and the sync engine. You implement four abstract methods:
+
+| Method | Purpose |
+|--------|---------|
+| `ApplyContentToEntityAsync` | Write incoming sync data to your entities |
+| `GetEntityAsJsonAsync` | Read your entities for outbound sync |
+| `RemoveEntityAsync` | Handle remote deletes |
+| `GetAllEntitiesAsJsonAsync` | Provide full collection for snapshot sync |
+
+### WatchCollection
+
+Register collections for CDC tracking in your DocumentStore constructor:
+
+```csharp
+public MyDocumentStore(...) : base(...)
+{
+    WatchCollection("Customers", context.Customers, c => c.Id);
+    WatchCollection("Orders", context.Orders, o => o.Id);
+    // Only these collections participate in sync
+}
+```
+
 ## Global Configuration (EntglDbMapper)
 
-You can configure entity mappings globally instead of using attributes.
+Configure entity mappings globally instead of using attributes.
 
 ```csharp
 EntglDbMapper.Global.Entity<Product>()
@@ -101,8 +141,6 @@ public class User
 
 Indexes improve query performance (e.g., `Find(u => u.Age > 18)`).
 You can define them via `[Indexed]` attribute or `EntglDbMapper`.
-
-> **Note**: EntglDb automatically creates SQLite indexes for these properties.
 
 ## Exceptions
 
@@ -136,7 +174,42 @@ Supported LINQ operators:
 - Collections: `Contains` (IN clause)
 
 ```csharp
+// Compound query
+var results = await col.Find(u => u.Age > 18 && u.Name.StartsWith("A"));
+
 // Find users in list of IDs
 var ids = new[] { "1", "2" };
 await col.Find(u => ids.Contains(u.Id));
 ```
+
+## Configuration Interfaces
+
+### IPeerNodeConfigurationProvider
+
+Provides node configuration at runtime, supporting dynamic reconfiguration:
+
+```csharp
+public interface IPeerNodeConfigurationProvider
+{
+    PeerNodeConfiguration GetConfiguration();
+}
+```
+
+Use `StaticPeerNodeConfigurationProvider` for fixed configs or implement your own for dynamic scenarios (database-driven, file-based, etc.).
+
+### IConflictResolver
+
+Pluggable conflict resolution strategy:
+
+```csharp
+public interface IConflictResolver
+{
+    JsonElement Resolve(string collection, string key, 
+        JsonElement local, JsonElement remote, 
+        HlcTimestamp localTimestamp, HlcTimestamp remoteTimestamp);
+}
+```
+
+Built-in implementations:
+- `LastWriteWinsConflictResolver` — Picks the version with the highest HLC timestamp
+- `RecursiveNodeMergeConflictResolver` — Deep JSON merge with field-level timestamp tracking and array ID detection

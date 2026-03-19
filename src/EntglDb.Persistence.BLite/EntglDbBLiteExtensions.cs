@@ -2,6 +2,7 @@ using BLite.Core;
 using EntglDb.Core;
 using EntglDb.Core.Storage;
 using EntglDb.Core.Sync;
+using EntglDb.Network;
 using EntglDb.Persistence.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -53,6 +54,10 @@ public static IServiceCollection AddEntglDbBLite<TDbContext, TDocumentStore>(
 
     // Register the DocumentStore implementation first
     services.TryAddSingleton<IDocumentStore, TDocumentStore>();
+
+    // Forward ILocalInterestsProvider to the same IDocumentStore singleton so that
+    // TcpSyncServer can advertise the local node's watched collections during handshake.
+    services.TryAddSingleton<ILocalInterestsProvider>(sp => sp.GetRequiredService<IDocumentStore>());
     
     // Register BLite Stores using the metadata context
     services.TryAddSingleton<IOplogStore>(sp =>

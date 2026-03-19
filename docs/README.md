@@ -2,18 +2,18 @@
 
 This folder contains the official documentation for EntglDb, published as GitHub Pages.
 
-## Documentation Structure (v0.9.0)
+## Documentation Structure (v2.1)
 
 ### Getting Started
 - **[Getting Started](getting-started.md)** - Installation, setup, and first steps with EntglDb
 
 ### Core Documentation
-- **[Architecture](architecture.md)** - Hybrid Logical Clocks, Gossip Protocol, mesh networking
+- **[Architecture](architecture.md)** - Hybrid Logical Clocks, Gossip Protocol, mesh networking, platform model
 - **[API Reference](api-reference.md)** - Complete API documentation with examples
 - **[Querying](querying.md)** - Data querying patterns and LINQ support
 
 ### Persistence & Storage
-- **[Persistence Providers](persistence-providers.md)** - SQLite, EF Core, PostgreSQL comparison
+- **[Persistence Providers](persistence-providers.md)** - BLite and EF Core provider comparison
 - **[Deployment Modes](deployment-modes.md)** - Single vs Multi-cluster strategies
 
 ### Networking & Security

@@ -1,6 +1,6 @@
 # Conflict Resolution
 
-**EntglDb v0.6.0** introduces **pluggable conflict resolution strategies** to handle concurrent updates to the same document across different nodes.
+EntglDb provides **pluggable conflict resolution strategies** to handle concurrent updates to the same document across different nodes. The strategy applies when the sync engine detects that two nodes have independently modified the same document (detected via vector clock divergence).
 
 ## Overview
 
@@ -136,17 +136,24 @@ When two nodes modify the same document offline and later sync, a conflict occur
 
 ## Configuration
 
-### Select Strategy at Startup
+### Register via Dependency Injection (v2.x)
 
 ```csharp
 using EntglDb.Core.Sync;
 
-// Last Write Wins (default)
-services.AddSingleton<IConflictResolver, LastWriteWinsConflictResolver>();
+// In Program.cs or Startup.cs — register before AddEntglDbCore()
+builder.Services.AddSingleton<IConflictResolver, LastWriteWinsConflictResolver>();
+// OR
+builder.Services.AddSingleton<IConflictResolver, RecursiveNodeMergeConflictResolver>();
 
-// OR Recursive Merge
-services.AddSingleton<IConflictResolver, RecursiveNodeMergeConflictResolver>();
+builder.Services
+    .AddEntglDbCore()
+    .AddEntglDbBLite<AppDbContext, AppDocumentStore>(
+        sp => new AppDbContext("myapp.blite"))
+    .AddEntglDbNetwork<StaticPeerNodeConfigurationProvider>();
 ```
+
+If no `IConflictResolver` is registered, EntglDb defaults to **Last Write Wins**.
 
 ### Console Sample
 

@@ -1,6 +1,6 @@
 # Network Security
 
-**EntglDb v0.6.0** introduces optional **secure networking** to protect data in transit between peers using industry-standard cryptography.
+EntglDb provides optional **secure networking** to protect data in transit between peers using industry-standard cryptography.
 
 ## Overview
 
@@ -135,7 +135,7 @@ A: Use SQLCipher or OS-level disk encryption (BitLocker, LUKS, FileVault).
 A: No. All nodes in a mesh share the same `authToken`. Key rotation is not yet supported.
 
 **Q: What about .NET Standard 2.0 support?**  
-A: Security works on all target frameworks (netstandard2.0, net6.0, net8.0) with appropriate polyfills.
+A: EntglDb v2.x targets `netstandard2.1` and `net10.0`. `netstandard2.0`, `net6.0`, and `net8.0` are no longer supported as of v2.0.
 
 ---
 

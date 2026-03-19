@@ -1,280 +1,220 @@
 # EntglDb Persistence Providers
 
-EntglDb supports multiple persistence backends to suit different deployment scenarios.
+EntglDb supports multiple persistence backends through a clean abstraction layer. Choose the provider that best fits your deployment scenario.
 
 ## Overview
 
-| Provider | Best For | Performance | Setup | Production Ready |
-|----------|----------|-------------|-------|------------------|
-| **SQLite (Direct)** | Embedded apps, single-node | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ✅ Yes |
-| **EF Core (Generic)** | Multi-DB support, migrations | ⭐⭐⭐ | ⭐⭐⭐ | ✅ Yes |
-| **PostgreSQL** | Production, high load, JSON queries | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ✅ Yes |
+| Provider | Package | Best For | Target Framework |
+|----------|---------|----------|-----------------|
+| **BLite** | `EntglDb.Persistence.BLite` | Embedded/desktop/mobile/edge | net10.0 |
+| **EF Core** | `EntglDb.Persistence.EntityFramework` | Cloud/enterprise, multi-database | net10.0 |
 
-## SQLite (Direct)
+Both providers share the same abstract interfaces (`IDocumentStore`, `IOplogStore`, `ISnapshotMetadataStore`, `IDocumentMetadataStore`), making it straightforward to switch between them or implement a custom provider.
 
-**Package:** `EntglDb.Persistence.Sqlite`
+## BLite (Embedded Document Database)
+
+**Package:** `EntglDb.Persistence.BLite`
+
+BLite is a high-performance embedded BSON document database with zero external dependencies. It is the recommended provider for embedded, desktop, mobile, and edge scenarios.
 
 ### Characteristics
 
-- ✅ **Zero configuration**: Works out of the box
-- ✅ **Excellent performance**: Native SQL, no ORM overhead
-- ✅ **WAL mode**: Concurrent readers + writers
-- ✅ **Per-collection tables**: Optional for better isolation
+- ✅ **Zero configuration**: Works out of the box, single file database
+- ✅ **High performance**: Native BSON engine, no ORM overhead
+- ✅ **Full async**: Async read/write operations (v1.1+)
+- ✅ **Per-collection tables**: Dynamic database paths for better isolation (v2.0+)
 - ✅ **Snapshots**: Fast reconnection with `SnapshotMetadata`
-- ✅ **Portable**: Single file database
-- ❌ **Limited JSON queries**: Uses `json_extract()`
+- ✅ **ACID**: Write-Ahead Logging (WAL) for consistency
+- ✅ **Vector search**: HNSW index support
+- ✅ **Cross-platform**: Windows, Linux, macOS
 
 ### When to Use
 
-- Building single-node applications
-- Embedded scenarios (desktop, mobile)
-- Development/testing
-- Maximum simplicity required
-- File-based portability important
+- Desktop applications (Avalonia, WPF, WinForms)
+- Mobile applications (.NET MAUI)
+- Edge computing and IoT
+- Development and testing
+- Offline-first scenarios where portability matters
 
 ### Configuration
 
 ```csharp
-// Legacy mode (simple)
-services.AddEntglDbSqlite("Data Source=entgldb.db");
-
-// New mode (per-collection tables)
-services.AddEntglDbSqlite(options =>
-{
-    options.BasePath = "/var/lib/entgldb";
-    options.DatabaseFilenameTemplate = "entgldb-{NodeId}.db";
-    options.UsePerCollectionTables = true;
-});
+// Register BLite persistence with DI
+builder.Services
+    .AddEntglDbCore()
+    .AddEntglDbBLite<MyDbContext, MyDocumentStore>(
+        sp => new MyDbContext("mydata.blite"));
 ```
 
-### Performance Tips
+### DocumentStore Implementation
 
-1. Enable WAL mode (done automatically)
-2. Use per-collection tables for large datasets
-3. Create indexes on frequently queried fields
-4. Keep database on fast storage (SSD)
+Extend `BLiteDocumentStore<T>` to create your sync bridge:
 
-## EF Core (Generic)
+```csharp
+public class MyDocumentStore : BLiteDocumentStore<MyDbContext>
+{
+    public MyDocumentStore(
+        MyDbContext context,
+        IPeerNodeConfigurationProvider configProvider,
+        IVectorClockService vectorClockService,
+        ILogger<MyDocumentStore>? logger = null)
+        : base(context, configProvider, vectorClockService, logger: logger)
+    {
+        WatchCollection("Users", context.Users, u => u.Id);
+    }
+
+    protected override async Task ApplyContentToEntityAsync(
+        string collection, string key, JsonElement content, CancellationToken ct)
+    {
+        // Map incoming JSON to your entity and upsert
+    }
+
+    // Implement remaining abstract methods...
+}
+```
+
+## EF Core (Entity Framework Core)
 
 **Package:** `EntglDb.Persistence.EntityFramework`
 
+The EF Core provider enables EntglDb to work with any database supported by Entity Framework Core, including SQL Server, PostgreSQL, MySQL, and SQLite.
+
 ### Characteristics
 
-- ✅ **Multi-database support**: SQL Server, MySQL, SQLite, PostgreSQL
+- ✅ **Multi-database support**: SQL Server, PostgreSQL, MySQL, SQLite
 - ✅ **EF Core benefits**: Migrations, LINQ, change tracking
 - ✅ **Type-safe**: Strongly-typed entities
-- ⚠️ **Query limitation**: JSON queries evaluated in-memory
-- ⚠️ **ORM overhead**: Slightly slower than direct SQL
+- ✅ **Production-grade**: Connection pooling, retry logic
+- ⚠️ **JSON queries**: Complex JSON queries evaluated in-memory
 
 ### When to Use
 
-- Need to support multiple database backends
-- Team familiar with EF Core patterns
-- Want automated migrations
-- Building enterprise applications
-- Database portability is important
+- Cloud deployments (Azure SQL, AWS RDS, etc.)
+- Enterprise applications with existing SQL infrastructure
+- Multi-tenant SaaS scenarios
+- Teams already familiar with EF Core
+- When database portability is important
 
 ### Configuration
 
-#### SQLite
-```csharp
-services.AddEntglDbEntityFrameworkSqlite("Data Source=entgldb.db");
-```
-
 #### SQL Server
 ```csharp
-services.AddEntglDbEntityFrameworkSqlServer(
-    "Server=localhost;Database=EntglDb;Trusted_Connection=True;");
+builder.Services.AddEntglDbEntityFramework(options =>
+{
+    options.UseSqlServer(
+        "Server=localhost;Database=EntglDb;Integrated Security=true");
+});
 ```
 
 #### PostgreSQL
 ```csharp
-services.AddDbContext<EntglDbContext>(options =>
+builder.Services.AddDbContext<EntglDbContext>(options =>
     options.UseNpgsql(connectionString));
-services.AddEntglDbEntityFramework();
+builder.Services.AddEntglDbEntityFramework();
 ```
 
 #### MySQL
 ```csharp
 var serverVersion = ServerVersion.AutoDetect(connectionString);
-services.AddEntglDbEntityFrameworkMySql(connectionString, serverVersion);
+builder.Services.AddEntglDbEntityFrameworkMySql(connectionString, serverVersion);
+```
+
+#### SQLite (via EF Core)
+```csharp
+builder.Services.AddEntglDbEntityFrameworkSqlite("Data Source=entgldb.db");
 ```
 
 ### Migrations
 
 ```bash
-# Add migration
 dotnet ef migrations add InitialCreate --context EntglDbContext
-
-# Apply migration
 dotnet ef database update --context EntglDbContext
 ```
 
-## PostgreSQL
+### DocumentStore Implementation
 
-**Package:** `EntglDb.Persistence.PostgreSQL`
-
-### Characteristics
-
-- ✅ **JSONB native storage**: Optimal JSON handling
-- ✅ **GIN indexes**: Fast JSON path queries
-- ✅ **High performance**: Production-grade
-- ✅ **Connection resilience**: Built-in retry logic
-- ✅ **Full ACID**: Strong consistency guarantees
-- ⚠️ **Future feature**: JSONB query translation (roadmap)
-
-### When to Use
-
-- Production deployments with high traffic
-- Need advanced JSON querying (future)
-- Require horizontal scalability
-- Want best-in-class reliability
-- Cloud deployments (AWS RDS, Azure Database, etc.)
-
-### Configuration
+Extend `EfCoreDocumentStore<T>` for EF Core:
 
 ```csharp
-services.AddEntglDbPostgreSql(
-    "Host=localhost;Database=EntglDb;Username=user;Password=pass");
-
-// With custom options
-services.AddEntglDbPostgreSql(connectionString, options =>
+public class MyDocumentStore : EfCoreDocumentStore<MyEfDbContext>
 {
-    options.EnableSensitiveDataLogging(); // Dev only
-    options.CommandTimeout(30);
-});
-```
-
-### JSONB Indexes
-
-For optimal performance, create GIN indexes via migrations:
-
-```csharp
-protected override void Up(MigrationBuilder migrationBuilder)
-{
-    migrationBuilder.Sql(@"
-        CREATE INDEX IF NOT EXISTS IX_Documents_ContentJson_gin 
-        ON ""Documents"" USING GIN (""ContentJson"" jsonb_path_ops);
-        
-        CREATE INDEX IF NOT EXISTS IX_Oplog_PayloadJson_gin 
-        ON ""Oplog"" USING GIN (""PayloadJson"" jsonb_path_ops);
-    ");
+    public MyDocumentStore(
+        MyEfDbContext context,
+        IPeerNodeConfigurationProvider configProvider,
+        IVectorClockService vectorClockService,
+        ILogger<MyDocumentStore>? logger = null)
+        : base(context, configProvider, vectorClockService, logger: logger)
+    {
+        WatchCollection("Products", /* ... */);
+    }
+    // Implement abstract methods...
 }
-```
-
-### Connection String Examples
-
-#### Local Development
-```
-Host=localhost;Port=5432;Database=EntglDb;Username=admin;Password=secret
-```
-
-#### Production with SSL
-```
-Host=prod-db.example.com;Database=EntglDb;Username=admin;Password=secret;SSL Mode=Require
-```
-
-#### Connection Pooling
-```
-Host=localhost;Database=EntglDb;Username=admin;Password=secret;Pooling=true;Minimum Pool Size=5;Maximum Pool Size=100
 ```
 
 ## Feature Comparison
 
-| Feature | SQLite (Direct) | EF Core | PostgreSQL |
-|---------|----------------|---------|------------|
-| **Storage Format** | File-based | Varies | Server-based |
-| **JSON Storage** | TEXT | NVARCHAR/TEXT | JSONB |
-| **JSON Indexing** | Standard | Standard | GIN/GIST |
-| **JSON Queries** | `json_extract()` | In-Memory | Native (future) |
-| **Concurrent Writes** | Good (WAL) | Varies | Excellent |
-| **Horizontal Scaling** | No | Limited | Yes (replication) |
-| **Migrations** | Manual SQL | EF Migrations | EF Migrations |
-| **Connection Pooling** | N/A | Built-in | Built-in |
-| **Cloud Support** | N/A | Varies | Excellent |
+| Feature | BLite | EF Core |
+|---------|-------|---------|
+| **Storage Format** | BSON file-based | Varies (SQL Server, PostgreSQL, etc.) |
+| **Setup Complexity** | Zero config | Connection string + migrations |
+| **Performance** | Excellent (native) | Good (ORM overhead) |
+| **JSON Storage** | Native BSON | TEXT/NVARCHAR/JSONB |
+| **Async Operations** | Full async (v1.1+) | Full async |
+| **ContentHash** | ✅ (v2.1+) | ✅ (v2.1+) |
+| **Snapshot Support** | ✅ | ✅ |
+| **Per-Collection Tables** | ✅ (v2.0+) | Standard EF models |
+| **Vector Search (HNSW)** | ✅ | ❌ |
+| **Horizontal Scaling** | No | Yes (database-dependent) |
+| **Connection Pooling** | N/A | Built-in |
+| **Cloud Deployment** | Possible (file storage) | Recommended |
 
-## Performance Benchmarks
+## Custom Persistence Providers
 
-_These are approximate figures for comparison:_
+You can implement a custom persistence provider by implementing the core interfaces:
 
-### Write Performance (docs/sec)
+```csharp
+public interface IDocumentStore
+{
+    Task PutAsync(string collection, string key, JsonElement content, CancellationToken ct);
+    Task<JsonElement?> GetAsync(string collection, string key, CancellationToken ct);
+    Task DeleteAsync(string collection, string key, CancellationToken ct);
+    // ...
+}
 
-| Provider | Single Write | Bulk Insert (1000) |
-|----------|--------------|-------------------|
-| SQLite | 5,000 | 50,000 |
-| EF Core (SQL Server) | 3,000 | 30,000 |
-| PostgreSQL | 8,000 | 80,000 |
-
-### Read Performance (docs/sec)
-
-| Provider | Single Read | Query (100 results) |
-|----------|-------------|---------------------|
-| SQLite | 10,000 | 5,000 |
-| EF Core (SQL Server) | 8,000 | 4,000 |
-| PostgreSQL | 12,000 | 8,000 |
-
-_*Benchmarks vary based on hardware, network, and configuration_
-
-## Migration Guide
-
-### From SQLite to PostgreSQL
-
-1. Export data from SQLite
-2. Set up PostgreSQL database
-3. Update connection configuration
-4. Import data to PostgreSQL
-5. Verify functionality
-
-### From EF Core to PostgreSQL
-
-1. Change NuGet package reference
-2. Update service registration
-3. Generate new migrations for PostgreSQL
-4. Apply migrations
-5. Test thoroughly
+public interface IOplogStore
+{
+    Task AppendAsync(OplogEntry entry, CancellationToken ct);
+    Task<IEnumerable<OplogEntry>> GetEntriesAfterAsync(HlcTimestamp after, CancellationToken ct);
+    // ...
+}
+```
 
 ## Recommendations
 
-### Development
-- **Use**: SQLite (Direct)
-- **Why**: Fast, simple, portable
+### Development & Testing
+- **Use BLite**: Fast, zero config, disposable, no server required
 
-### Testing
-- **Use**: SQLite (Direct) or EF Core with SQLite
-- **Why**: Disposable, fast test execution
+### Embedded / Edge / Mobile
+- **Use BLite**: Best performance, single file, cross-platform, vector search
 
-### Production (Low-Medium Scale)
-- **Use**: SQLite (Direct) with per-collection tables
-- **Why**: Excellent performance, simple ops
+### Cloud / Enterprise
+- **Use EF Core**: SQL Server or PostgreSQL for production workloads with managed database services
 
-### Production (High Scale)
-- **Use**: PostgreSQL
-- **Why**: Best performance, scalability, reliability
-
-### Enterprise
-- **Use**: EF Core with SQL Server or PostgreSQL
-- **Why**: Enterprise support, compliance, familiarity
+### Multi-Tenant SaaS
+- **Use EF Core + ASP.NET Core Multi-Cluster**: Isolated databases per tenant with shared hosting
 
 ## Troubleshooting
 
-### SQLite: "Database is locked"
-- Ensure WAL mode is enabled (automatic)
-- Increase busy timeout
-- Check for long-running transactions
+### BLite: File locking issues
+- Ensure only one process accesses the BLite file at a time
+- Use per-collection tables (v2.0+) for better isolation
 
 ### EF Core: "Query evaluated in-memory"
 - Expected for complex JSON queries
-- Consider PostgreSQL for better JSON support
-- Use indexes on frequently queried properties
+- Use simple equality/comparison operators for best performance
+- Consider adding database indexes on frequently queried properties
 
-### PostgreSQL: "Connection pool exhausted"
-- Increase `Maximum Pool Size`
-- Check for connection leaks
-- Consider connection pooler (PgBouncer)
-
-## Future Enhancements
-
-- **JSONB Query Translation**: Native PostgreSQL JSON queries from QueryNode
-- **MongoDB Provider**: NoSQL option for document-heavy workloads
-- **Redis Cache Layer**: Hybrid persistence for high-read scenarios
-- **Multi-Master PostgreSQL**: Active-active replication support
+### EF Core: Connection pool exhausted
+- Increase `Maximum Pool Size` in connection string
+- Ensure DbContext instances are properly disposed
+- For PostgreSQL, consider PgBouncer for connection pooling

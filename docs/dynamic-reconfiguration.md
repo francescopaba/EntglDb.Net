@@ -6,7 +6,7 @@ nav_order: 8
 
 # Dynamic Reconfiguration & Leader Election
 
-EntglDb v0.8.0 introduces support for dynamic reconfiguration, allowing nodes to change their role, listening ports, and database identity without a full process restart. This is essential for containerized environments and long-running services.
+EntglDb supports dynamic reconfiguration, allowing nodes to change their role, listening ports, and database identity without a full process restart. This is essential for containerized environments and long-running services.
 
 ## Configuration Provider
 

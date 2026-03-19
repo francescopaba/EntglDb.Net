@@ -6,7 +6,7 @@ nav_order: 9
 
 # Network Telemetry
 
-Starting from v0.7.2, EntglDb includes a built-in telemetry system to monitor network performance, compression efficiency, and encryption overhead. This system is designed to have near-zero impact on runtime performance while providing valuable insights into peer-to-peer communication.
+EntglDb includes a built-in telemetry system to monitor network performance, compression efficiency, and encryption overhead. This system is designed to have near-zero impact on runtime performance while providing valuable insights into peer-to-peer communication.
 
 ## Collected Metrics
 

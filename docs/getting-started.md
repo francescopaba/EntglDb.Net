@@ -1,121 +1,165 @@
-# Getting Started (v0.9.0)
+# Getting Started (v2.1)
 
 ## Installation
 
-EntglDb is available as a set of NuGet packages for .NET 8.0, .NET 6.0, and .NET Standard 2.0.
+EntglDb is available as a set of NuGet packages targeting `.NET Standard 2.1` and `.NET 10.0`.
+
+> **Breaking Change (v2.0)**: EntglDb no longer supports `netstandard2.0`, `net6.0`, or `net8.0`. Upgrade to `.NET 10.0` for full feature support, or use `.NET Standard 2.1` compatible hosts.
+
+### Core Packages
 
 ```bash
+# Core abstractions and sync engine
 dotnet add package EntglDb.Core
+
+# P2P networking (TCP sync, UDP discovery, Protobuf protocol)
 dotnet add package EntglDb.Network
-dotnet add package EntglDb.Persistence.Sqlite
+
+# Sync orchestration (oplog, vector clocks, CDC)
+dotnet add package EntglDb.Sync
 ```
 
-### Cloud & Enterprise Packages
-
-For ASP.NET Core hosting and enterprise database support:
+### Persistence Providers
 
 ```bash
-# ASP.NET Core hosting
-dotnet add package EntglDb.AspNet
+# BLite embedded document database (recommended for desktop/mobile/edge)
+dotnet add package EntglDb.Persistence.BLite
 
-# Entity Framework Core (SQL Server, MySQL, SQLite)
+# Entity Framework Core (SQL Server, PostgreSQL, MySQL, SQLite)
 dotnet add package EntglDb.Persistence.EntityFramework
-
-# PostgreSQL with JSONB optimization
-dotnet add package EntglDb.Persistence.PostgreSQL
 ```
 
-### EntglStudio (New!)
+### Cloud & ASP.NET Core
 
-EntglStudio is a standalone GUI tool for managing your EntglDb nodes and data.
-
-*   [**Download EntglStudio**](https://github.com/EntglDb/EntglDb.Net/releases)
+```bash
+# ASP.NET Core hosting with health checks, multi-cluster support
+dotnet add package EntglDb.AspNet
+```
 
 ## Requirements
 
-- **.NET 8.0+ Runtime** (recommended) or .NET 6.0+
-- **SQLite** (included via Microsoft.Data.Sqlite)
-- **PostgreSQL 12+** (optional, for PostgreSQL persistence)
-- **SQL Server 2016+** (optional, for SQL Server persistence)
+- **.NET 10.0** (recommended) or any runtime supporting `.NET Standard 2.1`
+- **BLite 3.7.0** (bundled with `EntglDb.Persistence.BLite`)
+- **EF Core 10.0.5** (bundled with `EntglDb.Persistence.EntityFramework`)
+
+## Package Overview
+
+| Package | Purpose | Target Framework |
+|---------|---------|-----------------|
+| `EntglDb.Core` | Interfaces, models, conflict resolution | netstandard2.1; net10.0 |
+| `EntglDb.Sync` | Oplog, Vector Clock, CDC orchestration | netstandard2.1; net10.0 |
+| `EntglDb.Network` | TCP sync, UDP discovery, Protobuf wire format | netstandard2.1; net10.0 |
+| `EntglDb.Persistence` | Abstract persistence interfaces | netstandard2.1; net10.0 |
+| `EntglDb.Persistence.BLite` | BLite embedded document DB provider | net10.0 |
+| `EntglDb.Persistence.EntityFramework` | EF Core provider (multi-database) | net10.0 |
+| `EntglDb.AspNet` | ASP.NET Core hosting, health checks | net10.0 |
 
 ## Basic Usage
 
-### 1. Initialize the Store
-Use `SqlitePeerStore` for persistence. Supported on Windows, Linux, and macOS.
+### 1. Define Your Database Context
 
 ```csharp
-using EntglDb.Core;
-using EntglDb.Core.Sync;
-using EntglDb.Persistence.Sqlite;
-using EntglDb.Network.Security;
+public class MyDbContext : EntglDocumentDbContext
+{
+    public DocumentCollection<string, Customer> Customers { get; private set; }
+    public DocumentCollection<string, Order> Orders { get; private set; }
 
-// Choose conflict resolver (v0.6.0+)
-var resolver = new RecursiveNodeMergeConflictResolver(); // OR LastWriteWinsConflictResolver()
-
-var store = new SqlitePeerStore("Data Source=my-node.db", logger, resolver);
-// Automatically creates tables on first run
+    public MyDbContext(string dbPath) : base(dbPath) { }
+}
 ```
 
-### 2. Configure Networking (with Optional Security)
-Use `AddEntglDbNetwork` extension method to register services.
+### 2. Create Your Document Store (the Sync Bridge)
+
+This is where you tell EntglDb which collections to sync and how to map between your entities and the sync engine:
 
 ```csharp
-var services = new ServiceCollection();
-string myNodeId = "node-1";
-int port = 5001;
-string authToken = "my-secret-cluster-key";
+public class MyDocumentStore : BLiteDocumentStore<MyDbContext>
+{
+    public MyDocumentStore(
+        MyDbContext context,
+        IPeerNodeConfigurationProvider configProvider,
+        IVectorClockService vectorClockService,
+        ILogger<MyDocumentStore>? logger = null)
+        : base(context, configProvider, vectorClockService, logger: logger)
+    {
+        WatchCollection("Customers", context.Customers, c => c.Id);
+        WatchCollection("Orders", context.Orders, o => o.Id);
+    }
 
-services.AddSingleton<IPeerStore>(store);
+    protected override async Task ApplyContentToEntityAsync(
+        string collection, string key, JsonElement content, CancellationToken ct)
+    {
+        switch (collection)
+        {
+            case "Customers":
+                var customer = content.Deserialize<Customer>()!;
+                customer.Id = key;
+                var existing = _context.Customers.Find(c => c.Id == key).FirstOrDefault();
+                if (existing != null) _context.Customers.Update(customer);
+                else _context.Customers.Insert(customer);
+                break;
+        }
+        await _context.SaveChangesAsync(ct);
+    }
 
-// Optional: Enable encryption (v0.6.0+)
-services.AddSingleton<IPeerHandshakeService, SecureHandshakeService>();
-
-services.AddEntglDbNetwork(myNodeId, port, authToken);
+    // Implement GetEntityAsJsonAsync, RemoveEntityAsync, GetAllEntitiesAsJsonAsync...
+}
 ```
 
-### 3. Start the Node
+### 3. Wire It Up with Dependency Injection
 
 ```csharp
-var provider = services.BuildServiceProvider();
-var node = provider.GetRequiredService<EntglDbNode>();
+var builder = Host.CreateApplicationBuilder();
 
-node.Start();
+builder.Services.AddSingleton<IPeerNodeConfigurationProvider>(
+    new StaticPeerNodeConfigurationProvider(new PeerNodeConfiguration
+    {
+        NodeId = "node-1",
+        TcpPort = 8580,
+        AuthToken = "my-cluster-secret"
+    }));
+
+builder.Services
+    .AddEntglDbCore()
+    .AddEntglDbBLite<MyDbContext, MyDocumentStore>(
+        sp => new MyDbContext("mydata.blite"))
+    .AddEntglDbNetwork<StaticPeerNodeConfigurationProvider>();
+
+await builder.Build().RunAsync();
 ```
 
-### 4. CRUD Operations
-Interact with data using `PeerDatabase`.
+### 4. Use Your Database Normally
 
 ```csharp
-var db = new PeerDatabase(store, "my-node-id"); // Node ID used for HLC clock
-await db.InitializeAsync();
+public class MyService
+{
+    private readonly MyDbContext _db;
 
-var users = db.Collection("users");
+    public MyService(MyDbContext db) => _db = db;
 
-// Put
-await users.Put("user-1", new { Name = "Alice", Age = 30 });
-
-// Get
-var user = await users.Get<User>("user-1");
-
-// Query
-var results = await users.Find<User>(u => u.Age > 20);
+    public async Task CreateCustomer(string name)
+    {
+        // Write directly — EntglDb handles sync automatically
+        await _db.Customers.InsertAsync(
+            new Customer { Id = Guid.NewGuid().ToString(), Name = name });
+        await _db.SaveChangesAsync();
+        // CDC detects the change, creates an OplogEntry, and gossips to peers
+    }
+}
 ```
 
-## ASP.NET Core Deployment (v0.8.0+)
+## ASP.NET Core Deployment
 
 ### Single Cluster Mode (Recommended)
 
-Perfect for production deployments with dedicated database servers:
-
 ```csharp
-// Program.cs
 var builder = WebApplication.CreateBuilder(args);
 
-// Use PostgreSQL for production
-builder.Services.AddEntglDbPostgreSql(
-    builder.Configuration.GetConnectionString("EntglDb"));
+builder.Services.AddEntglDbEntityFramework(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("EntglDb"));
+});
 
-// Configure single cluster
 builder.Services.AddEntglDbAspNetSingleCluster(options =>
 {
     options.NodeId = "server-01";
@@ -125,9 +169,8 @@ builder.Services.AddEntglDbAspNetSingleCluster(options =>
 });
 
 var app = builder.Build();
-
 app.MapHealthChecks("/health");
-app.Run();
+await app.RunAsync();
 ```
 
 ### Multi-Cluster Mode
@@ -146,58 +189,43 @@ builder.Services.AddEntglDbAspNetMultiCluster(options =>
 
 See [Deployment Modes](deployment-modes.md) for detailed comparison.
 
-## What's New in v0.9.0
+## Version History Highlights
 
-### 🚀 Production Enhancements
-- **Improved ASP.NET Core Sample**: Enhanced error handling and better examples
-- **EF Core Stability**: Fixed runtime issues for all persistence providers
-- **Sync Refinements**: More reliable synchronization across all deployment modes
+### v2.1 — ContentHash & Integrity
+- **ContentHash**: Deterministic SHA-256 content hash on `DocumentMetadata` with canonical JSON normalization
+- **P2P Sync Correctness**: CDC serialization fixes, LWW timestamp accuracy, deterministic metadata IDs
 
-### 📸 Snapshots (v0.8.6)
-- **Fast Reconnection**: Peers resume sync from the last known state
-- **Optimized Recovery**: Prevents re-processing of already applied operations
-- **Automatic Management**: Snapshot metadata tracked per peer
+### v2.0 — Platform Maturity (Breaking)
+- **Framework Targeting**: `netstandard2.1;net10.0` only (dropped `netstandard2.0`, `net6.0`, `net8.0`)
+- **Dynamic Database Paths**: Per-collection table support in SQLite persistence
+- **Full Async BLite**: Complete async read/write operations
+- **Centralized EntglDbNodeService**: Auto-registration in Network package
+- **Remote Peer Auto-Sync**: Automatic synchronization of remote peer configurations via `_system_remote_peers`
+- **Dependencies**: Microsoft.Extensions 10.0.5, EF Core 10.0.5
 
-See [CHANGELOG](https://github.com/EntglDb/EntglDb.Net/blob/main/CHANGELOG.md) for complete version history.
+### v1.0 — Middleware Identity
+- **BLiteDocumentStore**: Abstract base class for BLite persistence
+- **EfCoreDocumentStore**: Abstract base class for EF Core persistence
+- **DocumentMetadataStore**: HLC timestamp tracking per document
+- **VectorClockService**: Shared singleton keeping Vector Clock in sync between CDC and OplogStore
+- **Positioning**: Redefined from "P2P database" to "sync middleware"
 
-## What's New in v0.8.0
-
-### ☁️ Cloud Infrastructure
+### v0.8 — Cloud Infrastructure
 - **ASP.NET Core Hosting**: Single and Multi-cluster deployment modes
-- **Multi-Database Support**: SQL Server, PostgreSQL, MySQL, SQLite via EF Core
-- **PostgreSQL Optimization**: JSONB storage with GIN indexes
+- **Entity Framework Core**: SQL Server, PostgreSQL, MySQL, SQLite support
 - **OAuth2 JWT Authentication**: Secure cloud deployments
 - **Health Checks**: Production monitoring and observability
+- **Snapshots**: Fast reconnection with delta sync
 
-[Learn more about Cloud Deployment →](deployment-modes.md)
-
-## What's New in v0.7.0
-
-### 📦 Efficient Networking
-- **Brotli Compression**: Data is automatically compressed, significantly reducing bandwidth usage
+### v0.7 — Efficient Networking
+- **Brotli Compression**: Bandwidth-efficient synchronization
 - **Protocol v4**: Enhanced framing and security negotiation
 
-## What's New in v0.6.0
+### v0.6 — Security & Conflict Resolution
+- **ECDH + AES-256**: Secure peer-to-peer communication
+- **Recursive Merge**: Field-level JSON merge with array ID detection
 
-### 🔐 Secure Networking
-Protect your data in transit with:
-- **ECDH** key exchange
-- **AES-256-CBC** encryption
-- **HMAC-SHA256** authentication
-
-[Learn more about Security →](security.md)
-
-### 🔀 Advanced Conflict Resolution
-Choose your strategy:
-- **Last Write Wins** - Simple, fast, timestamp-based
-- **Recursive Merge** - Intelligent JSON merging with array ID detection
-
-[Learn more about Conflict Resolution →](conflict-resolution.md)
-
-### 🎯 Multi-Target Framework Support
-- `netstandard2.0` - Maximum compatibility
-- `net6.0` - Modern features
-- `net8.0` - Latest performance optimizations
+See [CHANGELOG](https://github.com/EntglDb/EntglDb.Net/blob/main/CHANGELOG.md) for complete version history.
 
 ## Next Steps
 
