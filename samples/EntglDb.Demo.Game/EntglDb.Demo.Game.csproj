@@ -15,8 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BLite" Version="3.8.0" />
-    <PackageReference Include="BLite.SourceGenerators" Version="3.8.0">
+    <PackageReference Include="BLite" Version="4.0.0" />
+    <PackageReference Include="BLite.SourceGenerators" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -24,7 +24,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.5" />
-    <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    <PackageReference Include="Spectre.Console" Version="0.54.0" />
   </ItemGroup>
 
   <ItemGroup>

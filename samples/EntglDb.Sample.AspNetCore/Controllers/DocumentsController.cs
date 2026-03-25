@@ -16,14 +16,19 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpGet("{collection}/{id}")]
-    public IActionResult GetDocument(string collection, string id)
+    public async Task<IActionResult> GetDocument(string collection, string id)
     {
-        return collection.ToLower() switch
+        switch (collection.ToLower())
         {
-            "users" => _db.Users.FindById(id) is { } u ? Ok(u) : NotFound(),
-            "todolists" => _db.TodoLists.FindById(id) is { } t ? Ok(t) : NotFound(),
-            _ => NotFound()
-        };
+            case "users":
+                var user = await _db.Users.FindByIdAsync(id);
+                return user is not null ? Ok(user) : NotFound();
+            case "todolists":
+                var todo = await _db.TodoLists.FindByIdAsync(id);
+                return todo is not null ? Ok(todo) : NotFound();
+            default:
+                return NotFound();
+        }
     }
 
     [HttpPost("{collection}")]
@@ -53,13 +58,22 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpGet("{collection}")]
-    public IActionResult ListDocuments(string collection)
+    public async Task<IActionResult> ListDocuments(string collection)
     {
-        return collection.ToLower() switch
+        switch (collection.ToLower())
         {
-            "users" => Ok(_db.Users.FindAll().ToList()),
-            "todolists" => Ok(_db.TodoLists.FindAll().ToList()),
-            _ => NotFound()
-        };
+            case "users":
+                var users = new List<User>();
+                await foreach (var u in _db.Users.FindAllAsync())
+                    users.Add(u);
+                return Ok(users);
+            case "todolists":
+                var lists = new List<TodoList>();
+                await foreach (var t in _db.TodoLists.FindAllAsync())
+                    lists.Add(t);
+                return Ok(lists);
+            default:
+                return NotFound();
+        }
     }
 }

@@ -32,7 +32,7 @@ public class GameEngine
     }
 
     public IEnumerable<Hero> GetAliveHeroes() =>
-        _db.Heroes.FindAll().Where(h => h.IsAlive).ToList();
+        _db.Heroes.AsQueryable().Where(h => h.IsAlive).ToList();
 
     public async Task SaveHeroAsync(Hero hero, CancellationToken ct)
     {
@@ -244,13 +244,13 @@ public class GameEngine
     // ── Queries ──────────────────────────────────────────────────────────────
 
     public IEnumerable<BattleLog> GetRecentBattles(int count = 10) =>
-        _db.BattleLogs.FindAll()
+        _db.BattleLogs.AsQueryable()
             .OrderByDescending(b => b.Timestamp)
             .Take(count)
             .ToList();
 
     public IEnumerable<Hero> GetLeaderboard(int count = 10) =>
-        _db.Heroes.FindAll()
+        _db.Heroes.AsQueryable()
             .OrderByDescending(h => h.Level)
             .ThenByDescending(h => h.MonstersKilled)
             .Take(count)

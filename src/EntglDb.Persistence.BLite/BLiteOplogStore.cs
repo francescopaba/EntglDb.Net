@@ -37,14 +37,14 @@ public class BLiteOplogStore : OplogStore
     public override async Task DropAsync(CancellationToken cancellationToken = default)
     {
         // Use Id (technical key) for deletion, not Hash (business key)
-        await _context.OplogEntries.DeleteBulkAsync(_context.OplogEntries.FindAll().Select(e => e.Id), cancellationToken);
+        await _context.OplogEntries.DeleteBulkAsync((await _context.OplogEntries.FindAllAsync().ToListAsync()).Select(e => e.Id), cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         _vectorClock.Invalidate();
     }
 
     public override async Task<IEnumerable<OplogEntry>> ExportAsync(CancellationToken cancellationToken = default)
     {
-        return _context.OplogEntries.FindAll().ToDomain();
+        return (await _context.OplogEntries.FindAllAsync().ToListAsync()).ToDomain();
     }
 
     public override async Task<IEnumerable<OplogEntry>> GetChainRangeAsync(string startHash, string endHash, CancellationToken cancellationToken = default)

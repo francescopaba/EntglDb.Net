@@ -46,33 +46,33 @@ public class SampleDocumentStore : BLiteDocumentStore<SampleDbContext>
     {
         foreach (var (collection, key, content) in documents)
         {
-            UpsertEntity(collection, key, content);
+            await UpsertEntity(collection, key, content);
         }
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    private void UpsertEntity(string collection, string key, JsonElement content)
+    private async Task UpsertEntity(string collection, string key, JsonElement content)
     {
         switch (collection)
         {
             case UsersCollection:
                 var user = content.Deserialize<User>()!;
                 user.Id = key;
-                var existingUser = _context.Users.Find(u => u.Id == key).FirstOrDefault();
+                var existingUser = await _context.Users.FindAsync(u => u.Id == key).FirstOrDefaultAsync();
                 if (existingUser != null)
-                    _context.Users.Update(user);
+                    await _context.Users.UpdateAsync(user);
                 else
-                    _context.Users.Insert(user);
+                    await _context.Users.InsertAsync(user);
                 break;
 
             case TodoListsCollection:
                 var todoList = content.Deserialize<TodoList>()!;
                 todoList.Id = key;
-                var existingTodoList = _context.TodoLists.Find(t => t.Id == key).FirstOrDefault();
+                var existingTodoList = await _context.TodoLists.FindAsync(t => t.Id == key).FirstOrDefaultAsync();
                 if (existingTodoList != null)
-                    _context.TodoLists.Update(todoList);
+                    await _context.TodoLists.UpdateAsync(todoList);
                 else
-                    _context.TodoLists.Insert(todoList);
+                    await _context.TodoLists.InsertAsync(todoList);
                 break;
 
             default:
@@ -80,21 +80,21 @@ public class SampleDocumentStore : BLiteDocumentStore<SampleDbContext>
         }
     }
 
-    protected override Task<JsonElement?> GetEntityAsJsonAsync(
+    protected override async Task<JsonElement?> GetEntityAsJsonAsync(
         string collection, string key, CancellationToken cancellationToken)
     {
-        return Task.FromResult<JsonElement?>(collection switch
+        return collection switch
         {
-            UsersCollection => SerializeEntity(_context.Users.Find(u => u.Id == key).FirstOrDefault()),
-            TodoListsCollection => SerializeEntity(_context.TodoLists.Find(t => t.Id == key).FirstOrDefault()),
+            UsersCollection => SerializeEntity(await _context.Users.FindAsync(u => u.Id == key).FirstOrDefaultAsync()),
+            TodoListsCollection => SerializeEntity(await _context.TodoLists.FindAsync(t => t.Id == key).FirstOrDefaultAsync()),
             _ => null
-        });
+        };
     }
 
     protected override async Task RemoveEntityAsync(
         string collection, string key, CancellationToken cancellationToken)
     {
-        DeleteEntity(collection, key);
+        await DeleteEntity(collection, key);
         await _context.SaveChangesAsync(cancellationToken);
     }
 
@@ -103,20 +103,20 @@ public class SampleDocumentStore : BLiteDocumentStore<SampleDbContext>
     {
         foreach (var (collection, key) in documents)
         {
-            DeleteEntity(collection, key);
+            await DeleteEntity(collection, key);
         }
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    private void DeleteEntity(string collection, string key)
+    private async Task DeleteEntity(string collection, string key)
     {
         switch (collection)
         {
             case UsersCollection:
-                _context.Users.Delete(key);
+                await _context.Users.DeleteAsync(key);
                 break;
             case TodoListsCollection:
-                _context.TodoLists.Delete(key);
+                await _context.TodoLists.DeleteAsync(key);
                 break;
             default:
                 _logger.LogWarning("Attempted to remove entity from unsupported collection: {Collection}", collection);
@@ -127,12 +127,12 @@ public class SampleDocumentStore : BLiteDocumentStore<SampleDbContext>
     protected override async Task<IEnumerable<(string Key, JsonElement Content)>> GetAllEntitiesAsJsonAsync(
         string collection, CancellationToken cancellationToken)
     {
-        return await Task.Run(() => collection switch
+        return await Task.Run(async () => collection switch
         {
-            UsersCollection => _context.Users.FindAll()
+            UsersCollection => (await _context.Users.FindAllAsync().ToListAsync())
                 .Select(u => (u.Id, SerializeEntity(u)!.Value)),
 
-            TodoListsCollection => _context.TodoLists.FindAll()
+            TodoListsCollection => (await _context.TodoLists.FindAllAsync().ToListAsync())
                 .Select(t => (t.Id, SerializeEntity(t)!.Value)),
 
             _ => Enumerable.Empty<(string, JsonElement)>()

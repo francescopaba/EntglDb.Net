@@ -152,7 +152,7 @@ public class SnapshotStoreTests : IDisposable
             await newSnapshotStore.ReplaceDatabaseAsync(snapshotStream);
 
             // Assert - Data should be restored
-            var restoredUser = newContext.Users.FindById("user-rt");
+            var restoredUser = await newContext.Users.FindByIdAsync("user-rt");
             Assert.NotNull(restoredUser);
             Assert.Equal("RoundTrip User", restoredUser.Name);
             Assert.Equal(42, restoredUser.Age);
@@ -213,8 +213,8 @@ public class SnapshotStoreTests : IDisposable
         await _snapshotStore.MergeSnapshotAsync(snapshotStream);
 
         // Assert - Both users should exist
-        var existingUser = _context.Users.FindById("existing");
-        var newUser = _context.Users.FindById("new-user");
+        var existingUser = await _context.Users.FindByIdAsync("existing");
+        var newUser = await _context.Users.FindByIdAsync("new-user");
         
         Assert.NotNull(existingUser);
         Assert.NotNull(newUser);

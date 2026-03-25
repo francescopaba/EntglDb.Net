@@ -4,6 +4,7 @@ using EntglDb.Sample.Shared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace EntglDb.Test.Avalonia;
 
@@ -21,14 +22,14 @@ public partial class TodoListView : UserControl
     public TodoListView(SampleDbContext db) : this()
     {
         _db = db;
-        LoadLists();
+        _ = LoadLists();
     }
 
-    private void LoadLists()
+    private async Task LoadLists()
     {
         try
         {
-            _allLists = _db.TodoLists.FindAll().ToList();
+            _allLists = await _db.TodoLists.FindAllAsync().ToListAsync();
             ListsBox.ItemsSource = _allLists.Select(l => $"{l.Name} ({l.Items.Count})").ToList();
         }
         catch (Exception ex)

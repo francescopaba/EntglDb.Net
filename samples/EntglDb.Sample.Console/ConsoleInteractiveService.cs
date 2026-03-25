@@ -124,8 +124,8 @@ public class ConsoleInteractiveService : BackgroundService
         }
         else if (input.StartsWith("c"))
         {
-            var userCount = _db.Users.FindAll().Count();
-            var todoCount = _db.TodoLists.FindAll().Count();
+            var userCount = await _db.Users.FindAllAsync().CountAsync();
+            var todoCount = await _db.TodoLists.FindAllAsync().CountAsync();
             System.Console.WriteLine($"Collection 'Users': {userCount} documents");
             System.Console.WriteLine($"Collection 'TodoLists': {todoCount} documents");
         }
@@ -144,7 +144,7 @@ public class ConsoleInteractiveService : BackgroundService
             var id = System.Console.ReadLine();
             if (!string.IsNullOrEmpty(id))
             {
-                var u = _db.Users.FindById(id);
+                var u = await _db.Users.FindByIdAsync(id);
                 System.Console.WriteLine(u != null ? $"Got: {u.Name}, Age {u.Age}, City: {u.Address?.City}" : "Not found");
             }
         }
@@ -175,7 +175,7 @@ public class ConsoleInteractiveService : BackgroundService
         else if (input.StartsWith("f"))
         {
             System.Console.WriteLine("Query: Age > 28");
-            var results = _db.Users.Find(u => u.Age > 28);
+            var results = await _db.Users.FindAsync(u => u.Age > 28).ToListAsync();
             foreach(var u in results) System.Console.WriteLine($"Found: {u.Name} ({u.Age})");
         }
         else if (input.StartsWith("h"))
@@ -233,7 +233,7 @@ public class ConsoleInteractiveService : BackgroundService
         }
         else if (input == "todos")
         {
-            var lists = _db.TodoLists.FindAll();
+            var lists = await _db.TodoLists.FindAllAsync().ToListAsync();
             
             System.Console.WriteLine("=== Todo Lists ===");
             foreach (var list in lists)
@@ -271,7 +271,7 @@ public class ConsoleInteractiveService : BackgroundService
         await Task.Delay(100);
         
         // Simulate Node A edit: Mark item as completed, add new item
-        var listA = _db.TodoLists.FindById(list.Id);
+        var listA = await _db.TodoLists.FindByIdAsync(list.Id);
         if (listA != null)
         {
             listA.Items[0].Completed = true; // Mark milk as done
@@ -284,7 +284,7 @@ public class ConsoleInteractiveService : BackgroundService
         await Task.Delay(100);
         
         // Simulate Node B edit: Mark different item, add different item
-        var listB = _db.TodoLists.FindById(list.Id);
+        var listB = await _db.TodoLists.FindByIdAsync(list.Id);
         if (listB != null)
         {
             listB.Items[1].Completed = true; // Mark bread as done
@@ -297,7 +297,7 @@ public class ConsoleInteractiveService : BackgroundService
         await Task.Delay(200);
         
         // Show final merged state
-        var merged = _db.TodoLists.FindById(list.Id);
+        var merged = await _db.TodoLists.FindByIdAsync(list.Id);
         if (merged != null)
         {
             System.Console.WriteLine("\n🔀 Merged Result:");

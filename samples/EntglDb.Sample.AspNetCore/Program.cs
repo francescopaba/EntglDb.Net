@@ -5,6 +5,7 @@ using EntglDb.Persistence.BLite;
 using EntglDb.Sample.Shared;
 using EntglDb.Sync;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -79,12 +80,12 @@ app.MapGet("/api/peers", (IDiscoveryService discovery) =>
 .WithName("GetPeers");
 
 // API: Get Telemetry
-app.MapGet("/api/telemetry", (SampleDbContext db, EntglDb.Network.Telemetry.INetworkTelemetryService telemetry) =>
+app.MapGet("/api/telemetry", async (SampleDbContext db, EntglDb.Network.Telemetry.INetworkTelemetryService telemetry) =>
 {
     var counts = new Dictionary<string, int>
     {
-        ["Users"] = db.Users.FindAll().Count(),
-        ["TodoLists"] = db.TodoLists.FindAll().Count()
+        ["Users"] = await db.Users.FindAllAsync().CountAsync(),
+        ["TodoLists"] = await db.TodoLists.FindAllAsync().CountAsync()
     };
 
     return Results.Ok(new
@@ -126,7 +127,7 @@ public class AspNetPeerNodeConfigurationProvider : IPeerNodeConfigurationProvide
     }
 }
 
-public class EntglDbHealth : Microsoft.Extensions.Diagnostics.HealthChecks.IHealthCheck
+public class EntglDbHealth : IHealthCheck
 {
     private readonly SampleDbContext _db;
 
@@ -135,18 +136,18 @@ public class EntglDbHealth : Microsoft.Extensions.Diagnostics.HealthChecks.IHeal
         _db = db;
     }
 
-    public Task<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult> CheckHealthAsync(
-        Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext context,
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _ = _db.Users.FindAll().Count();
-            return Task.FromResult(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("EntglDb is reachable"));
+            _ = await _db.Users.FindAllAsync().CountAsync();
+            return HealthCheckResult.Healthy("EntglDb is reachable");
         }
         catch (Exception ex)
         {
-            return Task.FromResult(Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("EntglDb is unreachable", ex));
+            return HealthCheckResult.Unhealthy("EntglDb is unreachable", ex);
         }
     }
 }

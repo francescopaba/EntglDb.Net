@@ -383,6 +383,17 @@ public class TcpPeerClient : IDisposable
 
     private bool _useCompression = false; // Negotiated after handshake
 
+    /// <summary>
+    /// Sends a custom message to the connected peer.
+    /// Used by application-level protocols (MessageType 32+) to initiate outbound messages.
+    /// Requires an established, authenticated connection (call <see cref="ConnectAsync"/> and <see cref="HandshakeAsync"/> first).
+    /// </summary>
+    public async Task SendCustomAsync(int messageType, IMessage message, CancellationToken token)
+    {
+        if (!IsConnected) throw new InvalidOperationException("Not connected to peer.");
+        await _protocol.SendMessageAsync(_stream!, messageType, message, _useCompression, _cipherState, token);
+    }
+
     private OperationType ParseOp(string op) => Enum.TryParse<OperationType>(op, out var val) ? val : OperationType.Put;
 
     public async Task GetSnapshotAsync(Stream destination, CancellationToken token)

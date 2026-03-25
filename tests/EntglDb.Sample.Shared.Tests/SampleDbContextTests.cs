@@ -54,7 +54,7 @@ public class SampleDbContextTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = _context.Users.FindById("user1");
+        var retrieved = await _context.Users.FindByIdAsync("user1");
         retrieved.Should().NotBeNull();
         retrieved!.Name.Should().Be("Alice");
         retrieved.Age.Should().Be(30);
@@ -76,7 +76,7 @@ public class SampleDbContextTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = _context.Users.FindById("user2");
+        var retrieved = await _context.Users.FindByIdAsync("user2");
         retrieved.Should().NotBeNull();
         retrieved!.Age.Should().Be(26);
         retrieved.Address?.City.Should().Be("Milan");
@@ -95,7 +95,7 @@ public class SampleDbContextTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = _context.Users.FindById("user3");
+        var retrieved = await _context.Users.FindByIdAsync("user3");
         retrieved.Should().BeNull();
     }
 
@@ -119,7 +119,7 @@ public class SampleDbContextTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = _context.TodoLists.FindById("list1");
+        var retrieved = await _context.TodoLists.FindByIdAsync("list1");
         retrieved.Should().NotBeNull();
         retrieved!.Name.Should().Be("Shopping");
         retrieved.Items.Should().HaveCount(2);
@@ -150,7 +150,7 @@ public class SampleDbContextTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Assert
-        var retrieved = _context.TodoLists.FindById("list2");
+        var retrieved = await _context.TodoLists.FindByIdAsync("list2");
         retrieved.Should().NotBeNull();
         retrieved!.Items.Should().HaveCount(2);
         retrieved.Items.First().Completed.Should().Be(true);
@@ -158,16 +158,16 @@ public class SampleDbContextTests : IDisposable
     }
 
     [Fact]
-    public void Users_FindAll_ShouldReturnAllUsers()
+    public async Task Users_FindAll_ShouldReturnAllUsers()
     {
         // Arrange
-        _context.Users.InsertAsync(new User { Id = "u1", Name = "User1", Age = 20 }).Wait();
-        _context.Users.InsertAsync(new User { Id = "u2", Name = "User2", Age = 30 }).Wait();
-        _context.Users.InsertAsync(new User { Id = "u3", Name = "User3", Age = 40 }).Wait();
-        _context.SaveChangesAsync().Wait();
+        await _context.Users.InsertAsync(new User { Id = "u1", Name = "User1", Age = 20 });
+        await _context.Users.InsertAsync(new User { Id = "u2", Name = "User2", Age = 30 });
+        await _context.Users.InsertAsync(new User { Id = "u3", Name = "User3", Age = 40 });
+        await _context.SaveChangesAsync();
 
         // Act
-        var allUsers = _context.Users.FindAll().ToList();
+        var allUsers = await _context.Users.FindAllAsync().ToListAsync();
 
         // Assert
         allUsers.Should().HaveCount(3);
@@ -175,16 +175,18 @@ public class SampleDbContextTests : IDisposable
     }
 
     [Fact]
-    public void Users_Find_WithPredicate_ShouldFilterCorrectly()
+    public async Task Users_Find_WithPredicate_ShouldFilterCorrectly()
     {
         // Arrange
-        _context.Users.InsertAsync(new User { Id = "f1", Name = "Young", Age = 18 }).Wait();
-        _context.Users.InsertAsync(new User { Id = "f2", Name = "Adult", Age = 30 }).Wait();
-        _context.Users.InsertAsync(new User { Id = "f3", Name = "Senior", Age = 65 }).Wait();
-        _context.SaveChangesAsync().Wait();
+        await _context.Users.InsertAsync(new User { Id = "f1", Name = "Young", Age = 18 });
+        await _context.Users.InsertAsync(new User { Id = "f2", Name = "Adult", Age = 30 });
+        await _context.Users.InsertAsync(new User { Id = "f3", Name = "Senior", Age = 65 });
+        await _context.SaveChangesAsync();
 
         // Act
-        var adults = _context.Users.Find(u => u.Age >= 30).ToList();
+        var adults = await _context.Users.FindAllAsync()
+            .Where(u => u.Age >= 30)
+            .ToListAsync();
 
         // Assert
         adults.Should().HaveCount(2);

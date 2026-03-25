@@ -40,14 +40,14 @@ public partial class CollectionPage : ContentPage
         await LoadDocuments();
     }
 
-    private Task LoadDocuments()
+    private async Task LoadDocuments()
     {
         try
         {
             Documents.Clear();
             if (CollectionName == "Users")
             {
-                var allItems = _db.Users.FindAll().ToList();
+                var allItems = await _db.Users.FindAllAsync().ToListAsync();
                 DocumentCount = allItems.Count;
                 foreach (var item in allItems.Take(100))
                 {
@@ -58,7 +58,7 @@ public partial class CollectionPage : ContentPage
             }
             else if (CollectionName == "TodoLists")
             {
-                var allItems = _db.TodoLists.FindAll().ToList();
+                var allItems = await _db.TodoLists.FindAllAsync().ToListAsync();
                 DocumentCount = allItems.Count;
                 foreach (var item in allItems.Take(100))
                 {
@@ -76,7 +76,6 @@ public partial class CollectionPage : ContentPage
         {
             DocsRefreshView.IsRefreshing = false;
         }
-        return Task.CompletedTask;
     }
 
     private async void OnDocumentSelected(object sender, SelectionChangedEventArgs e)

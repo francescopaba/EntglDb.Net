@@ -108,7 +108,7 @@ public partial class MainView : UserControl, IHostedView
 
         try
         {
-            var user = _db.Users.FindById(KeyEntry.Text);
+            var user = await _db.Users.FindByIdAsync(KeyEntry.Text);
             if (user != null)
             {
                 AppendLog($"Found: {user.Name} ({user.Age})");
@@ -154,9 +154,9 @@ public partial class MainView : UserControl, IHostedView
         AppendLog("Spam finished.");
     }
 
-    private void OnCountClicked(object? sender, RoutedEventArgs e)
+    private async void OnCountClicked(object? sender, RoutedEventArgs e)
     {
-        var count = _db.Users.FindAll().Count();
+        var count = await _db.Users.FindAllAsync().CountAsync();
         AppendLog($"Total Users: {count}");
     }
 
@@ -276,7 +276,7 @@ public partial class MainView : UserControl, IHostedView
                 log.Text += $"✓ Created '{list.Name}'\n";
                 await Task.Delay(100);
                 
-                var listA = _db.TodoLists.FindById(list.Id);
+                var listA = await _db.TodoLists.FindByIdAsync(list.Id);
                 if (listA != null)
                 {
                     listA.Items[0].Completed = true;
@@ -288,7 +288,7 @@ public partial class MainView : UserControl, IHostedView
                 
                 await Task.Delay(100);
                 
-                var listB = _db.TodoLists.FindById(list.Id);
+                var listB = await _db.TodoLists.FindByIdAsync(list.Id);
                 if (listB != null)
                 {
                     listB.Items[1].Completed = true;
@@ -300,7 +300,7 @@ public partial class MainView : UserControl, IHostedView
                 
                 await Task.Delay(200);
                 
-                var merged = _db.TodoLists.FindById(list.Id);
+                var merged = await _db.TodoLists.FindByIdAsync(list.Id);
                 if (merged != null)
                 {
                     var resolver = MergeRadio.IsChecked == true ? "RecursiveMerge" : "LWW";

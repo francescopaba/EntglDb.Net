@@ -309,8 +309,8 @@ public class BLiteStoreExportImportTests : IDisposable
         await _documentStore.ImportAsync(docs);
 
         // Assert
-        var u1 = _context.Users.FindById("imported1");
-        var u2 = _context.Users.FindById("imported2");
+        var u1 = await _context.Users.FindByIdAsync("imported1");
+        var u2 = await _context.Users.FindByIdAsync("imported2");
         Assert.NotNull(u1);
         Assert.NotNull(u2);
         Assert.Equal("Imported 1", u1.Name);
@@ -337,7 +337,7 @@ public class BLiteStoreExportImportTests : IDisposable
         await _documentStore.MergeAsync([newerDoc]);
 
         // Assert - With LastWriteWins, newer document should win
-        var user = _context.Users.FindById("merge-user");
+        var user = await _context.Users.FindByIdAsync("merge-user");
         Assert.NotNull(user);
         Assert.Equal("Updated", user.Name);
         Assert.Equal(25, user.Age);
