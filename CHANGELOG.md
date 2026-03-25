@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+<a name="2.3.0"></a>
+## [2.3.0](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v2.3.0) (2026-03-25)
+
+### Features
+
+* Add peer connection pool and refactor TCP clients ([fedc8de](https://www.github.com/EntglDb/EntglDb.Net/commit/fedc8dea07bf987a85724832f59e638796e43234))
+
 <a name="2.2.0"></a>
 ## [2.2.0](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v2.2.0) (2026-03-25)
 
