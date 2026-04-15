@@ -400,12 +400,6 @@ public class SyncOrchestrator : ISyncOrchestrator
             {
                 _peerPool.Invalidate(peer.Address);
             }
-
-            // Log successful sync outcome (failures are already logged in catch blocks)
-            if (syncSuccessful)
-            {
-                _logger.LogInformation("Sync with {NodeId} completed successfully.", peer.NodeId);
-            }
         }
     }
     
