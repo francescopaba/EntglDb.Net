@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+<a name="2.3.6"></a>
+## [2.3.6](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v2.3.6) (2026-04-17)
+
+### Bug Fixes
+
+* Use string JSON payloads across oplog and stores ([13cc7d9](https://www.github.com/EntglDb/EntglDb.Net/commit/13cc7d9207c6b1bf6feb1b3f57d727336d0b17fe))
+
 <a name="2.3.5"></a>
 ## [2.3.5](https://www.github.com/EntglDb/EntglDb.Net/releases/tag/v2.3.5) (2026-04-15)
 
