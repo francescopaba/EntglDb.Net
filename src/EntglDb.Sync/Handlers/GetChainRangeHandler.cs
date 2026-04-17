@@ -43,7 +43,7 @@ internal sealed class GetChainRangeHandler : INetworkMessageHandler
                     Collection = e.Collection,
                     Key = e.Key,
                     Operation = e.Operation.ToString(),
-                    JsonData = e.Payload?.GetRawText() ?? "",
+                    JsonData = e.Payload ?? "",
                     HlcWall = e.Timestamp.PhysicalTime,
                     HlcLogic = e.Timestamp.LogicalCounter,
                     HlcNode = e.Timestamp.NodeId,

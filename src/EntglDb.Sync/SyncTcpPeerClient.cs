@@ -162,7 +162,7 @@ public class SyncTcpPeerClient : IDisposable
                 Collection = e.Collection,
                 Key = e.Key,
                 Operation = e.Operation.ToString(),
-                JsonData = e.Payload?.GetRawText() ?? "",
+                JsonData = e.Payload ?? "",
                 HlcWall = e.Timestamp.PhysicalTime,
                 HlcLogic = e.Timestamp.LogicalCounter,
                 HlcNode = e.Timestamp.NodeId,
@@ -206,7 +206,7 @@ public class SyncTcpPeerClient : IDisposable
             e.Collection,
             e.Key,
             ParseOp(e.Operation),
-            string.IsNullOrEmpty(e.JsonData) ? default : System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(e.JsonData),
+            string.IsNullOrEmpty(e.JsonData) ? null : e.JsonData,
             new HlcTimestamp(e.HlcWall, e.HlcLogic, e.HlcNode),
             e.PreviousHash,
             e.Hash

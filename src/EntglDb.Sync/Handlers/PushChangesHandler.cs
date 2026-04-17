@@ -43,7 +43,7 @@ internal sealed class PushChangesHandler : INetworkMessageHandler
                 e.Collection,
                 e.Key,
                 operation,
-                string.IsNullOrEmpty(e.JsonData) ? (JsonElement?)null : JsonSerializer.Deserialize<JsonElement>(e.JsonData),
+                string.IsNullOrEmpty(e.JsonData) ? null : e.JsonData,
                 new HlcTimestamp(e.HlcWall, e.HlcLogic, e.HlcNode),
                 e.PreviousHash,
                 e.Hash

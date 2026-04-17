@@ -36,8 +36,7 @@ public class PerformanceRegressionTests
     private OplogEntry CreateOp(string key, object data, HlcTimestamp ts)
     {
         var json = JsonSerializer.Serialize(data);
-        var element = JsonDocument.Parse(json).RootElement;
-        return new OplogEntry("test", key, OperationType.Put, element, ts, string.Empty);
+        return new OplogEntry("test", key, OperationType.Put, json, ts, string.Empty);
     }
 
     [Fact(Skip = "Flaky test in piepelin, run manually when need")]
@@ -113,6 +112,6 @@ public class PerformanceRegressionTests
 
 public static class DocExt {
     public static OplogEntry ToOplogEntry(this Document d, OperationType t) {
-        return new OplogEntry(d.Collection, d.Key, t, d.Content, d.UpdatedAt, string.Empty);
+        return new OplogEntry(d.Collection, d.Key, t, d.Content.GetRawText(), d.UpdatedAt, string.Empty);
     }
 }

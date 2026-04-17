@@ -329,7 +329,7 @@ public abstract class BLiteDocumentStore<TDbContext> : IDocumentStore, IDisposab
             incoming.Collection,
             incoming.Key,
             OperationType.Put,
-            incoming.Content,
+            incoming.Content.GetRawText(),
             incoming.UpdatedAt,
             ""));
 

@@ -252,7 +252,7 @@ public abstract class EfCoreDocumentStore<TDbContext> : IDocumentStore, IDisposa
             incoming.Collection,
             incoming.Key,
             OperationType.Put,
-            incoming.Content,
+            incoming.Content.GetRawText(),
             incoming.UpdatedAt,
             ""));
 

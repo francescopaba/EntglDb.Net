@@ -130,7 +130,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
                 {
                     if (document == null && (oplogEntry.Operation == OperationType.Put) && oplogEntry.Payload != null)
                     {
-                        document = new Document(oplogEntry.Collection, oplogEntry.Key, oplogEntry.Payload!.Value, oplogEntry.Timestamp, false);
+                        document = new Document(oplogEntry.Collection, oplogEntry.Key, JsonSerializer.Deserialize<JsonElement>(oplogEntry.Payload!), oplogEntry.Timestamp, false);
                     }
                     else
                     {
@@ -150,7 +150,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
                 Collection = entry.Collection,
                 Key = entry.Key,
                 Operation = (int)entry.Operation,
-                PayloadJson = entry.Payload?.GetRawText(),
+                PayloadJson = entry.Payload,
                 TimestampPhysicalTime = entry.Timestamp.PhysicalTime,
                 TimestampLogicalCounter = entry.Timestamp.LogicalCounter,
                 TimestampNodeId = entry.Timestamp.NodeId,
@@ -205,7 +205,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             e.Collection,
             e.Key,
             (OperationType)e.Operation,
-            string.IsNullOrEmpty(e.PayloadJson) ? null : JsonSerializer.Deserialize<JsonElement>(e.PayloadJson),
+            e.PayloadJson,
             new HlcTimestamp(e.TimestampPhysicalTime, e.TimestampLogicalCounter, e.TimestampNodeId),
             e.PreviousHash ?? "",
             e.Hash
@@ -224,7 +224,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             entity.Collection,
             entity.Key,
             (OperationType)entity.Operation,
-            string.IsNullOrEmpty(entity.PayloadJson) ? null : JsonSerializer.Deserialize<JsonElement>(entity.PayloadJson),
+            entity.PayloadJson,
             new HlcTimestamp(entity.TimestampPhysicalTime, entity.TimestampLogicalCounter, entity.TimestampNodeId),
             entity.PreviousHash ?? "",
             entity.Hash
@@ -253,7 +253,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             e.Collection,
             e.Key,
             (OperationType)e.Operation,
-            string.IsNullOrEmpty(e.PayloadJson) ? null : JsonSerializer.Deserialize<JsonElement>(e.PayloadJson),
+            e.PayloadJson,
             new HlcTimestamp(e.TimestampPhysicalTime, e.TimestampLogicalCounter, e.TimestampNodeId),
             e.PreviousHash ?? "",
             e.Hash
@@ -282,7 +282,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             e.Collection,
             e.Key,
             (OperationType)e.Operation,
-            string.IsNullOrEmpty(e.PayloadJson) ? null : JsonSerializer.Deserialize<JsonElement>(e.PayloadJson),
+            e.PayloadJson,
             new HlcTimestamp(e.TimestampPhysicalTime, e.TimestampLogicalCounter, e.TimestampNodeId),
             e.PreviousHash ?? "",
             e.Hash
@@ -362,7 +362,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             Collection = entry.Collection,
             Key = entry.Key,
             Operation = (int)entry.Operation,
-            PayloadJson = entry.Payload?.GetRawText(),
+            PayloadJson = entry.Payload,
             TimestampPhysicalTime = entry.Timestamp.PhysicalTime,
             TimestampLogicalCounter = entry.Timestamp.LogicalCounter,
             TimestampNodeId = entry.Timestamp.NodeId,
@@ -432,7 +432,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
             e.Collection,
             e.Key,
             (OperationType)e.Operation,
-            string.IsNullOrEmpty(e.PayloadJson) ? null : JsonSerializer.Deserialize<JsonElement>(e.PayloadJson),
+            e.PayloadJson,
             new HlcTimestamp(e.TimestampPhysicalTime, e.TimestampLogicalCounter, e.TimestampNodeId),
             e.PreviousHash ?? "",
             e.Hash
@@ -452,7 +452,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
                     Collection = entry.Collection,
                     Key = entry.Key,
                     Operation = (int)entry.Operation,
-                    PayloadJson = entry.Payload?.GetRawText(),
+                    PayloadJson = entry.Payload,
                     TimestampPhysicalTime = entry.Timestamp.PhysicalTime,
                     TimestampLogicalCounter = entry.Timestamp.LogicalCounter,
                     TimestampNodeId = entry.Timestamp.NodeId,
@@ -488,7 +488,7 @@ public class EfCoreOplogStore<TDbContext> : OplogStore where TDbContext : DbCont
                         Collection = entry.Collection,
                         Key = entry.Key,
                         Operation = (int)entry.Operation,
-                        PayloadJson = entry.Payload?.GetRawText(),
+                        PayloadJson = entry.Payload,
                         TimestampPhysicalTime = entry.Timestamp.PhysicalTime,
                         TimestampLogicalCounter = entry.Timestamp.LogicalCounter,
                         TimestampNodeId = entry.Timestamp.NodeId,

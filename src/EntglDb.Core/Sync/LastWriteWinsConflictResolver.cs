@@ -11,7 +11,7 @@ public class LastWriteWinsConflictResolver : IConflictResolver
         if (local == null)
         {
             // Construct new document from oplog entry
-            var content = remote.Payload ?? default;
+            var content = string.IsNullOrEmpty(remote.Payload) ? default : JsonSerializer.Deserialize<JsonElement>(remote.Payload);
             var newDoc = new Document(remote.Collection, remote.Key, content, remote.Timestamp, remote.Operation == OperationType.Delete);
             return ConflictResolutionResult.Apply(newDoc);
         }
@@ -20,7 +20,7 @@ public class LastWriteWinsConflictResolver : IConflictResolver
         if (remote.Timestamp.CompareTo(local.UpdatedAt) > 0)
         {
             // Remote is newer, apply it
-            var content = remote.Payload ?? default;
+            var content = string.IsNullOrEmpty(remote.Payload) ? default : JsonSerializer.Deserialize<JsonElement>(remote.Payload);
             var newDoc = new Document(remote.Collection, remote.Key, content, remote.Timestamp, remote.Operation == OperationType.Delete);
             return ConflictResolutionResult.Apply(newDoc);
         }

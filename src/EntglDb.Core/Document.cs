@@ -31,7 +31,7 @@ public class Document
             //last wins
             if(UpdatedAt <= oplogEntry.Timestamp)
             {
-                Content = oplogEntry.Payload ?? default;
+                Content = string.IsNullOrEmpty(oplogEntry.Payload) ? default : JsonSerializer.Deserialize<JsonElement>(oplogEntry.Payload);
                 UpdatedAt = oplogEntry.Timestamp;
                 IsDeleted = oplogEntry.Operation == OperationType.Delete;
             }

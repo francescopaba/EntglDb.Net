@@ -18,8 +18,8 @@ namespace EntglDb.Core.Tests
             var timestamp = new HlcTimestamp(100, 0, "node-1");
             var prevHash = "prev-hash";
 
-            var payload1 = JsonDocument.Parse("{\"prop\": 1}").RootElement;
-            var payload2 = JsonDocument.Parse("{\"prop\": 2, \"extra\": \"whitespace\"}").RootElement;
+            var payload1 = "{\"prop\": 1}";
+            var payload2 = "{\"prop\": 2, \"extra\": \"whitespace\"}";
 
             // Act
             var entry1 = new OplogEntry(collection, key, op, payload1, timestamp, prevHash);
@@ -159,8 +159,8 @@ namespace EntglDb.Core.Tests
             // Payload is deliberately excluded from the hash (chain integrity is
             // content-agnostic — the hash covers identity fields only).
             var ts = new HlcTimestamp(1, 0, "n");
-            var payloadA = System.Text.Json.JsonDocument.Parse("""{"x":1}""").RootElement;
-            var payloadB = System.Text.Json.JsonDocument.Parse("""{"x":999}""").RootElement;
+            var payloadA = """{"x":1}""";
+            var payloadB = """{"x":999}""";
 
             var entryA = new OplogEntry("col", "key", OperationType.Put, payloadA, ts, "p");
             var entryB = new OplogEntry("col", "key", OperationType.Put, payloadB, ts, "p");

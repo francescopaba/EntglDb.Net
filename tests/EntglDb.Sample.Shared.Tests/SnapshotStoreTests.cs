@@ -252,7 +252,7 @@ public class SnapshotStoreTests : IDisposable
             "Users",
             "manual-key",
             OperationType.Put,
-            JsonDocument.Parse("{\"test\": true}").RootElement,
+            "{\"test\": true}",
             new HlcTimestamp(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), 0, "test-node"),
             ""
         );

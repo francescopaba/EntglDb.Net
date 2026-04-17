@@ -90,7 +90,7 @@ public sealed class PendingChangesFlushService : IPendingChangesFlushService
 
         // For Put: read current content from the application document store.
         var operationType = change.OperationType;
-        JsonElement? content = null;
+        string? content = null;
 
         if (operationType == OperationType.Put)
         {
@@ -102,7 +102,7 @@ public sealed class PendingChangesFlushService : IPendingChangesFlushService
             }
             else
             {
-                content = doc.Content;
+                content = doc.Content.GetRawText();
             }
         }
 

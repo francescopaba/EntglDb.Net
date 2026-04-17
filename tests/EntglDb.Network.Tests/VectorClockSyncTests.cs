@@ -35,12 +35,12 @@ public class VectorClockSyncTests
         // Add oplog entries for node1 in remote
         remoteStore.OplogEntries.Add(new OplogEntry(
             "users", "user1", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"Alice\"}"),
+            "{\"name\":\"Alice\"}",
             new HlcTimestamp(150, 2, "node1"), "", "hash1"
         ));
         remoteStore.OplogEntries.Add(new OplogEntry(
             "users", "user2", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"Bob\"}"),
+            "{\"name\":\"Bob\"}",
             new HlcTimestamp(200, 5, "node1"), "hash1", "hash2"
         ));
 
@@ -82,7 +82,7 @@ public class VectorClockSyncTests
         // Add oplog entries for node1 in local
         localStore.OplogEntries.Add(new OplogEntry(
             "users", "user1", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"Charlie\"}"),
+            "{\"name\":\"Charlie\"}",
             new HlcTimestamp(150, 2, "node1"), "", "hash1"
         ));
 
@@ -125,13 +125,13 @@ public class VectorClockSyncTests
 
         partition1Store.OplogEntries.Add(new OplogEntry(
             "users", "user1", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"P1User\"}"),
+            "{\"name\":\"P1User\"}",
             new HlcTimestamp(300, 5, "node1"), "", "hash_p1"
         ));
 
         partition2Store.OplogEntries.Add(new OplogEntry(
             "users", "user2", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"P2User\"}"),
+            "{\"name\":\"P2User\"}",
             new HlcTimestamp(400, 8, "node3"), "", "hash_p2"
         ));
 
@@ -201,7 +201,7 @@ public class VectorClockSyncTests
 
         newNodeStore.OplogEntries.Add(new OplogEntry(
             "users", "user3", OperationType.Put,
-            System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>("{\"name\":\"NewNode\"}"),
+            "{\"name\":\"NewNode\"}",
             new HlcTimestamp(50, 1, "node3"), "", "hash_new"
         ));
 

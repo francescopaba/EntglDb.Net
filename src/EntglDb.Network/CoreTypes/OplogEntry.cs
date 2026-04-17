@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json;
 
 namespace EntglDb.Core;
 
@@ -111,12 +110,12 @@ public class OplogEntry
     public string Collection { get; }
     public string Key { get; }
     public OperationType Operation { get; }
-    public JsonElement? Payload { get; }
+    public string? Payload { get; }
     public HlcTimestamp Timestamp { get; }
     public string Hash { get; }
     public string PreviousHash { get; }
 
-    public OplogEntry(string collection, string key, OperationType operation, JsonElement? payload, HlcTimestamp timestamp, string previousHash, string? hash = null)
+    public OplogEntry(string collection, string key, OperationType operation, string? payload, HlcTimestamp timestamp, string previousHash, string? hash = null)
     {
         Collection = collection;
         Key = key;

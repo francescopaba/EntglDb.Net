@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EntglDb.Core;
@@ -109,7 +110,7 @@ public abstract class OplogStore : IOplogStore
             {
                 if (document == null && (oplogEntry.Operation == OperationType.Put) && oplogEntry.Payload != null)
                 {
-                    document = new Document(oplogEntry.Collection, oplogEntry.Key, oplogEntry.Payload!.Value, oplogEntry.Timestamp, false);
+                    document = new Document(oplogEntry.Collection, oplogEntry.Key, JsonSerializer.Deserialize<JsonElement>(oplogEntry.Payload!), oplogEntry.Timestamp, false);
                 }
                 else
                 {

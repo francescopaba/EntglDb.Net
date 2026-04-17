@@ -26,7 +26,7 @@ public class RecursiveNodeMergeConflictResolver : IConflictResolver
     {
         if (local == null)
         {
-            var content = remote.Payload ?? default;
+            var content = string.IsNullOrEmpty(remote.Payload) ? default : JsonSerializer.Deserialize<JsonElement>(remote.Payload);
             var newDoc = new Document(remote.Collection, remote.Key, content, remote.Timestamp, remote.Operation == OperationType.Delete);
             return ConflictResolutionResult.Apply(newDoc);
         }
@@ -42,7 +42,7 @@ public class RecursiveNodeMergeConflictResolver : IConflictResolver
         }
 
         var localJson = local.Content;
-        var remoteJson = remote.Payload ?? default;
+        var remoteJson = string.IsNullOrEmpty(remote.Payload) ? default : JsonSerializer.Deserialize<JsonElement>(remote.Payload);
         var localTs = local.UpdatedAt;
         var remoteTs = remote.Timestamp;
 

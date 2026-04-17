@@ -382,7 +382,7 @@ public class EfCoreStoreExportImportTests : IDisposable
 
     private static OplogEntry CreateOplogEntry(string collection, string key, string nodeId, long physicalTime)
     {
-        var payload = JsonDocument.Parse($"{{\"test\": \"{key}\"}}").RootElement;
+        var payload = $"{{\"test\": \"{key}\"}}";
         var timestamp = new HlcTimestamp(physicalTime, 0, nodeId);
         return new OplogEntry(collection, key, OperationType.Put, payload, timestamp, "");
     }

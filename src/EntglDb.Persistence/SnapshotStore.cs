@@ -100,7 +100,7 @@ public class SnapshotStore : ISnapshotService
                 Collection = o.Collection,
                 Key = o.Key,
                 Operation = (int)o.Operation,
-                JsonData = o.Payload?.ToString() ?? "",
+                JsonData = o.Payload ?? "",
                 HlcWall = o.Timestamp.PhysicalTime,
                 HlcLogic = o.Timestamp.LogicalCounter,
                 HlcNode = o.Timestamp.NodeId,
@@ -147,7 +147,7 @@ public class SnapshotStore : ISnapshotService
             o.Collection,
             o.Key,
             (OperationType)o.Operation,
-            JsonDocument.Parse(o.JsonData ?? "{}").RootElement,
+            string.IsNullOrEmpty(o.JsonData) ? null : o.JsonData,
             new HlcTimestamp(o.HlcWall, o.HlcLogic, o.HlcNode),
             o.Hash,
             o.PreviousHash)).ToList();
@@ -185,7 +185,7 @@ public class SnapshotStore : ISnapshotService
             o.Collection,
             o.Key,
             (OperationType)o.Operation,
-            JsonDocument.Parse(o.JsonData ?? "{}").RootElement,
+            string.IsNullOrEmpty(o.JsonData) ? null : o.JsonData,
             new HlcTimestamp(o.HlcWall, o.HlcLogic, o.HlcNode),
             o.Hash,
             o.PreviousHash)).ToList();

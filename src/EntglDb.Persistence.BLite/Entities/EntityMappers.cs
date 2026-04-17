@@ -27,7 +27,7 @@ public static class EntityMappers
             Key = entry.Key,
             Operation = (int)entry.Operation,
             // Store normalized (key-sorted) JSON so cross-node payload comparisons are reliable
-            PayloadJson = entry.Payload.HasValue ? NormalizeJson(entry.Payload.Value) : "",
+            PayloadJson = string.IsNullOrEmpty(entry.Payload) ? "" : NormalizeJson(JsonSerializer.Deserialize<JsonElement>(entry.Payload)),
             TimestampPhysicalTime = entry.Timestamp.PhysicalTime,
             TimestampLogicalCounter = entry.Timestamp.LogicalCounter,
             TimestampNodeId = entry.Timestamp.NodeId,
@@ -41,18 +41,11 @@ public static class EntityMappers
     /// </summary>
     public static OplogEntry ToDomain(this OplogEntity entity)
     {
-        JsonElement? payload = null;
-        // Treat empty string as null payload (Delete operations)
-        if (!string.IsNullOrEmpty(entity.PayloadJson))
-        {
-            payload = JsonSerializer.Deserialize<JsonElement>(entity.PayloadJson);
-        }
-
         return new OplogEntry(
             entity.Collection,
             entity.Key,
             (OperationType)entity.Operation,
-            payload,
+            string.IsNullOrEmpty(entity.PayloadJson) ? null : entity.PayloadJson,
             new HlcTimestamp(entity.TimestampPhysicalTime, entity.TimestampLogicalCounter, entity.TimestampNodeId),
             entity.PreviousHash,
             entity.Hash);
@@ -206,6 +199,36 @@ public static class EntityMappers
         if (string.IsNullOrEmpty(normalizedJson)) return "";
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalizedJson));
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Computes a SHA-256 hash of the canonical (key-sorted) JSON representation of a document.
+    /// Returns an empty string for null/empty content (deletes).
+    /// </summary>
+    public static string ComputeContentHash(string? contentJson)
+    {
+        if (string.IsNullOrEmpty(contentJson)) return "";
+        return ComputeContentHash(JsonSerializer.Deserialize<JsonElement>(contentJson));
+    }
+
+    /// <summary>
+    /// Creates a DocumentMetadataEntity from collection, key, timestamp, deleted state, and optional raw JSON content.
+    /// Used for tracking document sync state when content is available as a string.
+    /// </summary>
+    public static DocumentMetadataEntity CreateDocumentMetadata(
+        string collection, string key, HlcTimestamp timestamp, bool isDeleted, string? contentJson)
+    {
+        return new DocumentMetadataEntity
+        {
+            Id = $"{collection}/{key}",
+            Collection = collection,
+            Key = key,
+            HlcPhysicalTime = timestamp.PhysicalTime,
+            HlcLogicalCounter = timestamp.LogicalCounter,
+            HlcNodeId = timestamp.NodeId,
+            IsDeleted = isDeleted,
+            ContentHash = isDeleted ? "" : ComputeContentHash(contentJson)
+        };
     }
 
     /// <summary>
