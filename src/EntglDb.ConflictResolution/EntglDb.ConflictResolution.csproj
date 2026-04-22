@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <Version>2.3.6</Version>
+    <Authors>francescopaba</Authors>
+    <Description>Standalone JSON Diff/Patch (RFC 6902/6901) 3-way merge library with configurable conflict strategies. Extends EntglDb conflict resolution beyond Last-Write-Wins.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>conflict-resolution;json-patch;json-diff;merge;entgldb;crdt</PackageTags>
+    <PackageProjectUrl>https://github.com/francescopaba/EntglDb.Net</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/francescopaba/EntglDb.Net</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="System.Text.Json" Version="10.0.5" />
+  </ItemGroup>
+
+</Project>
