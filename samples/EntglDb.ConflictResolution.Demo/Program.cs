@@ -40,7 +40,7 @@ static void RunScenario2_ConflictStrategies()
 
     var baseJson = "{\"name\":\"Mario\"}";
     var versionA = "{\"name\":\"Luigi\"}";
-    var versionB = "{\"name\":\"Pino\"}";
+    var versionB = "{\"name\":\"Marco\"}";
 
     PrintJson("Base", baseJson);
     PrintJson("Node A", versionA);

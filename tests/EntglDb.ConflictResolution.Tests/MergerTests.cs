@@ -204,7 +204,7 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
 
         Action act = () => With(ConflictStrategy.ThrowOnConflict).Merge(baseJson, a, b);
 
@@ -217,7 +217,7 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
         var result = With(ConflictStrategy.PreferA).Merge(baseJson, a, b);
         result.HasConflicts.Should().BeTrue();
         Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Luigi");
@@ -228,10 +228,10 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
         var result = With(ConflictStrategy.PreferB).Merge(baseJson, a, b);
         result.HasConflicts.Should().BeTrue();
-        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Pino");
+        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Marco");
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
 
         Action act = () => With(ConflictStrategy.PreferLatestHlc).Merge(baseJson, a, b);
 
@@ -251,7 +251,7 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
         var result = With(ConflictStrategy.PreferLatestHlc, hlc: _ => -1).Merge(baseJson, a, b);
         result.HasConflicts.Should().BeTrue();
         Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Luigi");
@@ -262,10 +262,10 @@ public class MergerTests
     {
         var baseJson = Json(new { name = "Mario" });
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
         var result = With(ConflictStrategy.PreferLatestHlc, hlc: _ => 1).Merge(baseJson, a, b);
         result.HasConflicts.Should().BeTrue();
-        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Pino");
+        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Marco");
     }
 
     [Fact]
@@ -395,7 +395,7 @@ public class MergerTests
     public void Merge_NullBase_DegeneratesToTwoWay()
     {
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
 
         var result = With(ConflictStrategy.PreferA).Merge(null, a, b);
 
@@ -407,12 +407,12 @@ public class MergerTests
     public void Merge_EmptyStringBase_TreatedAsNull()
     {
         var a = Json(new { name = "Luigi" });
-        var b = Json(new { name = "Pino" });
+        var b = Json(new { name = "Marco" });
 
         var result = With(ConflictStrategy.PreferB).Merge("", a, b);
 
         result.HasConflicts.Should().BeTrue();
-        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Pino");
+        Parse(result.MergedJson).GetProperty("name").GetString().Should().Be("Marco");
     }
 
     [Fact]
